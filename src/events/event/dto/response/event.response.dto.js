@@ -1,2 +1,2 @@
 import { buildChatUrl } from '../../../utils/chat.js';
-export const toEventResponse = (post) => ({ ...post, chatUrl: buildChatUrl(post) });
+export const toEventResponse = (ev) => ({ ...ev, chatUrl: buildChatUrl(ev) });

@@ -1,12 +1,20 @@
-export function parseUpdateBody(body){
-  const out = {};
-  if(body.title) out.title = body.title;
-  if(body.content) out.content = body.content;
-  if(body.restaurantName) out.restaurantName = body.restaurantName;
-  if(body.maxParticipants) out.maxParticipants = Number(body.maxParticipants);
-  if(body.startAt){ const s=new Date(body.startAt); if(isNaN(s)||s<=new Date()) throw new Error('invalid startAt'); out.startAt=s; }
-  if(body.endAt){ const e=new Date(body.endAt); if(isNaN(e)) throw new Error('invalid endAt'); out.endAt=e; }
-  if(out.endAt && out.startAt && out.endAt <= out.startAt) throw new Error('endAt must be after startAt');
-  if(body.status) out.status = body.status; // OPEN/CLOSED/CANCELED
-  return out;
+export function parseUpdateBody(body = {}) {
+  const patch = {};
+  if (body.title) patch.title = body.title;
+  if (body.content) patch.content = body.content;
+  if (body.restaurant_id) patch.restaurant_id = Number(body.restaurant_id);
+  if (body.start_at) {
+    const s = new Date(body.start_at);
+    if (isNaN(s) || s <= new Date()) throw new Error('invalid start_at');
+    patch.start_at = s;
+  }
+  if (body.end_at) {
+    const e = new Date(body.end_at);
+    if (isNaN(e)) throw new Error('invalid end_at');
+    patch.end_at = e;
+  }
+  if (patch.start_at && patch.end_at && patch.end_at <= patch.start_at) {
+    throw new Error('end_at must be after start_at');
+  }
+  return patch;
 }

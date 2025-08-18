@@ -1,9 +1,50 @@
-export function parseCreateBody(body){
-  const { title, content, restaurantName, startAt, endAt, maxParticipants } = body || {};
-  if(!title || !content || !startAt || !endAt || !maxParticipants) throw new Error('missing fields');
-  const start=new Date(startAt), end=new Date(endAt);
-  if(isNaN(start)||isNaN(end)) throw new Error('invalid datetime');
-  if(start<=new Date()) throw new Error('startAt must be future');
-  if(end<=start) throw new Error('endAt must be after startAt');
-  return { title, content, restaurantName, start, end, maxParticipants:Number(maxParticipants) };
+// 기존 date + start_time + end_time 로직 제거하고,
+// start_at / end_at 를 그대로 받아 검증합니다.
+
+export function parseCreateBody(body = {}) {
+  const {
+    title,
+    content,
+    restaurant_id,
+
+    // 둘 다 필수 (ISO datetime)
+    start_at,   // e.g. "2025-08-22T18:30:00.000Z" 또는 "2025-08-22 18:30"
+    end_at,     // e.g. "2025-08-22T20:00:00.000Z"
+
+    // (옵션) 최대 참여자 수 — 1~4만 허용, DB 저장은 안 하고 응답에만 전달
+    max_participants,
+  } = body;
+
+  if (!title || !restaurant_id || !start_at || !end_at) {
+    throw new Error('missing fields');
+  }
+
+  const start = new Date(start_at);
+  const end   = new Date(end_at);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw new Error('invalid datetime');
+  }
+  if (start <= new Date()) {
+    throw new Error('start_at must be future');
+  }
+  if (end <= start) {
+    throw new Error('end_at must be after start_at');
+  }
+
+  // 최대 참여자 수: 1~4만 허용 (스키마에 컬럼이 없으므로 저장은 못 하고 응답에만 반영)
+  let maxP = max_participants ?? 4;
+  maxP = Number(maxP);
+  if (!Number.isFinite(maxP) || maxP < 1 || maxP > 4) {
+    throw new Error('max_participants must be between 1 and 4');
+  }
+
+  return {
+    title,
+    content: content ?? '',
+    restaurant_id: Number(restaurant_id),
+    start_at: start,
+    end_at: end,
+    max_participants: maxP,
+  };
 }

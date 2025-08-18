@@ -1,1 +1,1 @@
-export const toCreateResponse = (post) => ({ ...post });
+export const toCreateResponse = (event) => event;

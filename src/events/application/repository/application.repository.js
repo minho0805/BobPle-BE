@@ -1,11 +1,31 @@
 import { prisma } from '../../../db/client.js';
-export const findPost = (id)=> prisma.mealPost.findUnique({ where:{ id } });
-export const findAppByUnique = (postId,userId)=> prisma.application.findUnique({ where:{ postId_userId:{ postId, userId } } });
-export const countApplied = (postId)=> prisma.application.count({ where:{ postId, status:'APPLIED' } });
-export const createApp = (postId,userId)=> prisma.application.create({ data:{ postId, userId, status:'APPLIED' } });
-export const findAppById = (id)=> prisma.application.findUnique({ where:{ id } });
-export const cancelApp = (id)=> prisma.application.update({ where:{ id }, data:{ status:'CANCELED', canceledAt: new Date() } });
-export const listMine = (userId, skip, take)=> prisma.application.findMany({
-  where:{ userId, status:'APPLIED' }, orderBy:{ id:'desc' }, skip, take, include:{ post:true }
-});
-export const countMine = (userId)=> prisma.application.count({ where:{ userId, status:'APPLIED' } });
+
+export const findEvent = (id) =>
+  prisma.events.findUnique({ where: { id: Number(id) } });
+
+export const findMyAppForEvent = (eventId, userId) =>
+  prisma.eventApplications.findFirst({
+    where: { eventId: Number(eventId), creatorId: Number(userId) },
+  });
+
+export const createApp = (eventId, userId) =>
+  prisma.eventApplications.create({
+    data: { eventId: Number(eventId), creatorId: Number(userId) },
+  });
+
+export const findAppById = (id) =>
+  prisma.eventApplications.findUnique({ where: { id: Number(id) } });
+
+export const deleteAppById = (id) =>
+  prisma.eventApplications.delete({ where: { id: Number(id) } });
+
+export const listMine = (userId, skip, take) =>
+  prisma.eventApplications.findMany({
+    where: { creatorId: Number(userId) },
+    include: { events: true },
+    orderBy: { id: 'desc' },
+    skip, take,
+  });
+
+export const countMine = (userId) =>
+  prisma.eventApplications.count({ where: { creatorId: Number(userId) } });
