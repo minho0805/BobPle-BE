@@ -1,7 +1,6 @@
-import express from "express";
-
-const router = express.Router({ mergeParams: true });
-router.get("/", (req, res, next) => {
-  res.send("creation");
-});
-export default router;
+import { Router } from 'express';
+import { requireAuth } from '../../../middleware/auth.js';
+import { creation } from '../controller/creation.controller.js';
+const r = Router();
+r.post('/creation', requireAuth, creation);
+export default r;

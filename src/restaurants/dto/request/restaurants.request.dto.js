@@ -1,0 +1,1 @@
+export const parseSearchQuery = (q)=>({ query:q.query, type:q.type, page:q.page, size:q.size, radius:q.radius });

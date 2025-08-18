@@ -1,0 +1,1 @@
+export const toSearchResponse = (d)=> d;
