@@ -23,7 +23,7 @@ export const registerRefreshToken = async (token) => {
 };
 export const expireRefreshToken = async (data) => {
   if (data.refreshToken === null) return -1;
-  const isExists = await prisma.refreshTokens.findUnique({
+  const isExists = await prisma.refreshTokens.findFirst({
     where: {
       token: data.refreshToken,
     },
@@ -31,7 +31,7 @@ export const expireRefreshToken = async (data) => {
   if (!isExists) return -1;
   return await prisma.refreshTokens.delete({
     where: {
-      token: data.refreshToken,
+      id: isExists.id,
     },
   });
 };
