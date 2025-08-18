@@ -1,40 +1,24 @@
-import { searchLocal } from '../repository/restaurants.repository.js';
-import { tm128ToWgs84, haversine } from '../../../utils/geo.js';
-import { config } from '../../../config/env.js';
+import * as repo from '../repository/restaurants.repository.js';
 
-const normalize = (it) => ({
-  name: (it.title || '').replace(/<[^>]+>/g, ''),
-  category: it.category || '',
-  telephone: it.telephone || null,
-  address: it.roadAddress || it.address || '',
-  link: it.link || '',
-  mapx: Number(it.mapx), mapy: Number(it.mapy),
-});
+// 프론트 탭과 매칭되는 카테고리만 허용
+const ALLOWED = new Set(['Korean', 'Chinese', 'Japanese']); // 필요시 Western 등 추가
 
-async function resolveCenter() {
-  const { data } = await searchLocal({ query: config.CENTER_QUERY || '서경대학교', display: 1, start: 1, sort: 'random' });
-  const item = (data.items || [])[0];
-  if (!item) throw new Error('CENTER_QUERY geocode failed');
-  return tm128ToWgs84(item.mapx, item.mapy);
+export async function search(q) {
+  const query = (q.query || '').trim();
+  const page = Math.max(1, Number(q.page || 1));
+  const size = Math.min(50, Math.max(1, Number(q.size || 20)));
+  const category = (q.category && ALLOWED.has(q.category)) ? q.category : undefined;
+
+  const { items, total } = await repo.search({ query, category, page, size });
+  const counts = await repo.counts(query);
+
+  return { items, page, size, total, counts };
 }
 
-export async function search({ query, type, page = 1, size = 20, radius }) {
-  const q = (query && String(query).trim()) || '음식점';
-  const display = Math.min(Math.max(Number(size), 1), 30);
-  const start = (Number(page) - 1) * display + 1;
-
-  const { data } = await searchLocal({ query: q, display, start, sort: 'random' });
-  let items = (data.items || []).map(normalize);
-  if (type) items = items.filter((i) => (i.category || '').includes(type));
-
-  const center = await resolveCenter(); // {lat, lon}
-  const r = Number(radius || config.RADIUS_M || 1000);
-
-  const enriched = items.map((i) => {
-    const { lat, lon } = tm128ToWgs84(i.mapx, i.mapy);
-    const distance = haversine(center.lat, center.lon, lat, lon);
-    return { ...i, lat, lon, distance };
-  }).filter((i) => i.distance <= r).sort((a, b) => a.distance - b.distance);
-
-  return { center: { ...center, radius: r }, page: Number(page), size: display, count: enriched.length, items: enriched };
+export async function suggest(q) {
+  const query = (q.query || '').trim();
+  if (!query) return { items: [] };
+  const limit = Math.min(20, Math.max(1, Number(q.limit || 10)));
+  const items = await repo.suggest({ query, limit });
+  return { items };
 }
