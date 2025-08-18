@@ -35,3 +35,12 @@ export const expireRefreshToken = async (data) => {
     },
   });
 };
+export const findUserById = async (id) => {
+  const user = await prisma.users.findFirst({
+    where: {
+      id: id,
+    },
+  });
+  if (!user) return -1;
+  return user;
+};
