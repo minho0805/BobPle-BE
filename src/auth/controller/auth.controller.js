@@ -3,8 +3,9 @@ import { clearTokenCookies, setTokenCookies } from "../../utils/cookie.js";
 import {
   loginRequestDto,
   logoutRequestDto,
+  refreshRequestDto,
 } from "../dto/request/auth.request.dto.js";
-import { logout, verifyIdToken } from "../service/auth.service.js";
+import { logout, refresh, verifyIdToken } from "../service/auth.service.js";
 import { StatusCodes } from "http-status-codes";
 
 export const handleLogin = async (req, res, next) => {
@@ -41,5 +42,14 @@ export const handleLogout = async (req, res, next) => {
   */
   await logout(logoutRequestDto(req.cookies));
   clearTokenCookies(res);
+  res.status(StatusCodes.OK).success(null);
+};
+export const handleRefresh = async (req, res, next) => {
+  /*
+    #swagger.summary = "토큰 리프레시"
+    #swagger.tags = ['Auth']
+  */
+  const accessToken = await refresh(refreshRequestDto(req.cookies));
+  setTokenCookies(res, accessToken.accessToken, null);
   res.status(StatusCodes.OK).success(null);
 };
