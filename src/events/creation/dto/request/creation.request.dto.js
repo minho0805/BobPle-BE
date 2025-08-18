@@ -16,27 +16,27 @@ export function parseCreateBody(body = {}) {
   } = body;
 
   if (!title || !restaurant_id || !start_at || !end_at) {
-    throw new Error('missing fields');
+    throw new Error('제대로 입력하세요');
   }
 
   const start = new Date(start_at);
   const end   = new Date(end_at);
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    throw new Error('invalid datetime');
+    throw new Error('잘못된 시간입니다.');
   }
   if (start <= new Date()) {
-    throw new Error('start_at must be future');
+    throw new Error('시작 시간은 현재보다 미래에 가능합니다');
   }
   if (end <= start) {
-    throw new Error('end_at must be after start_at');
+    throw new Error('종료 시간은 시작 시간보다 미래에 가능합니다. ');
   }
 
   // 최대 참여자 수: 1~4만 허용 (스키마에 컬럼이 없으므로 저장은 못 하고 응답에만 반영)
   let maxP = max_participants ?? 4;
   maxP = Number(maxP);
   if (!Number.isFinite(maxP) || maxP < 1 || maxP > 4) {
-    throw new Error('max_participants must be between 1 and 4');
+    throw new Error('최대 참여 인원은 1~4명입니다.');
   }
 
   return {
