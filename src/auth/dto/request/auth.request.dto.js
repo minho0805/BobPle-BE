@@ -8,3 +8,8 @@ export const logoutRequestDto = (cookies) => {
     refreshToken: cookies.refreshToken,
   };
 };
+export const refreshRequestDto = (cookies) => {
+  return {
+    refreshToken: cookies.refreshToken,
+  };
+};

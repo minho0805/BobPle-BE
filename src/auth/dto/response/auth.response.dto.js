@@ -5,3 +5,8 @@ export const loginResponseDto = (data) => {
   };
 };
 export const logoutResponseDto = (data) => {};
+export const refreshResponseDto = (data) => {
+  return {
+    accessToken: data.accessToken,
+  };
+};
