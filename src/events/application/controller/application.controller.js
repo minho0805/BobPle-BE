@@ -1,4 +1,3 @@
-import { ok } from '../../../utils/http.js';
 import * as svc from '../service/application.service.js';
 
 export const apply  = async (req, res, next) => { try { return ok(res, await svc.apply(req.params.eventId, req.user)); } catch (e) { next(e); } };

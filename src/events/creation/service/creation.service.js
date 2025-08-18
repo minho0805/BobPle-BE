@@ -1,110 +1,15 @@
-// prisma/schema.prisma
-generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
-}
+import { prisma } from '../../../db/client.js';   
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
 
-enum Gender {
-  Male
-  Female
-  None
-}
-
-model Users {
-  id                Int                  @id @default(autoincrement())
-  email             String               @unique(map: "email") @db.VarChar(40)
-  uid               String               @unique(map: "uid") @db.VarChar(300)
-  nickname          String               @unique(map: "nickname") @db.VarChar(10)
-  grade             Int
-  gender            Gender
-  profileImg        String               @map("profile_img") @db.VarChar(200)
-  createdAt         DateTime             @map("created_at") @default(now())
-  updatedAt         DateTime?            @updatedAt @map("updated_at")
-
-  events            Events[]
-  comments          Comments[]
-  reviews           Reviews[]
-  eventApplications EventApplications[]
-
-  @@map("users")
-}
-
-model Events {
-  id                 Int                  @id @default(autoincrement())
-  users              Users                @relation(fields: [creatorId], references: [id])
-  creatorId          Int                  @unique @map("creator_id")
-  title              String               @db.VarChar(100)
-  content            String               @db.Text
-  restaurants        Restaurants          @relation(fields: [restaurantId], references: [id])
-  restaurantId       Int                  @unique @map("restaurant_id")
-  startAt            DateTime             @map("start_at")
-  endAt              DateTime             @map("end_at")
-  createdAt          DateTime             @map("created_at") @default(now())
-  updatedAt          DateTime             @map("updated_at") @updatedAt
-
-  eventApplications  EventApplications[]
-  comments           Comments[]
-
-  @@map("events")
-}
-
-enum FoodType {
-  Korean
-  Japanese
-  Chinese
-}
-
-model Restaurants {
-  id           Int       @id @default(autoincrement())
-  name         String    @db.VarChar(100)
-  category     FoodType
-  address      String    @db.Text
-  telephone    String    @unique @db.VarChar(11)
-  mapx         Int
-  mapy         Int
-  isSponsored  Boolean   @map("is_sponsored")
-  createdAt    DateTime  @map("created_at") @default(now())
-  updatedAt    DateTime  @map("updated_at") @updatedAt
-
-  events       Events[]
-
-  @@map("restaurants")
-}
-
-model EventApplications {
-  id         Int     @id @default(autoincrement())
-  events     Events  @relation(fields: [eventId], references: [id])
-  eventId    Int     @unique @map("event_id")
-  users      Users   @relation(fields: [creatorId], references: [id])
-  creatorId  Int     @unique @map("creator_id")
-  createdAt  DateTime @map("created_at") @default(now())
-
-  @@map("event_applications")
-}
-
-model Comments {
-  id         Int      @id @default(autoincrement())
-  events     Events   @relation(fields: [eventId], references: [id])
-  eventId    Int      @unique @map("event_id")
-  users      Users    @relation(fields: [creatorId], references: [id])
-  creatorId  Int      @unique @map("creator_id")
-  content    String   @db.Text
-  createdAt  DateTime @map("created_at") @default(now())
-
-  @@map("comments")
-}
-
-model Reviews {
-  id         Int      @id @default(autoincrement())
-  users      Users    @relation(fields: [userId], references: [id])
-  userId     Int      @unique @map("user_id")
-  score      Float
-  createdAt  DateTime @map("created_at") @default(now())
-
-  @@map("reviews")
+export async function create(dto, user) {
+  return prisma.events.create({
+    data: {
+      title: dto.title,
+      content: dto.content,
+      startAt: dto.startAt,
+      endAt: dto.endAt,
+      creatorId: user.id,
+      restaurantId: dto.restaurantId,
+    },
+  });
 }

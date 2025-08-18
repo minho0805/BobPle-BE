@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { requireAuth } from '../../../middleware/auth.js';
 import * as ctrl from '../controller/application.controller.js';
 
 const r = Router();
-r.post('/:eventId/application', requireAuth, ctrl.apply);
-r.post('/:eventId/application/:applicationId/cancel', requireAuth, ctrl.cancel);
-r.get('/me', requireAuth, ctrl.mine);
+r.post('/:eventId/application', ctrl.apply);
+r.post('/:eventId/application/:applicationId/cancel', ctrl.cancel);
+r.get('/me', ctrl.mine);
 export default r;
