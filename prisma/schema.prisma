@@ -110,7 +110,7 @@ model Comments {
 model Reviews {
   id                      Int                       @id @default(autoincrement())
   users                   Users                     @relation(fields: [userId], references: [id])
-  userId                  Int                       @unique @map("user_id")
+  userId                  Int                       @map("user_id")
   score                   Float
   createdAt               DateTime                  @map("created_at") @default(now())
 
