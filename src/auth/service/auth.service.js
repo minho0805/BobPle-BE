@@ -40,7 +40,7 @@ export const verifyIdToken = async (data) => {
     throw new InvalidInputValueError("유효하지 않은 토큰 입니다.");
   }
 };
-export const handleLogout = async (data) => {
+export const logout = async (data) => {
   await expireRefreshToken(data);
   return logoutResponseDto(null);
 };

@@ -4,7 +4,7 @@ import {
   loginRequestDto,
   logoutRequestDto,
 } from "../dto/request/auth.request.dto.js";
-import { verifyIdToken } from "../service/auth.service.js";
+import { logout, verifyIdToken } from "../service/auth.service.js";
 import { StatusCodes } from "http-status-codes";
 
 export const handleLogin = async (req, res, next) => {
@@ -39,7 +39,7 @@ export const handleLogout = async (req, res, next) => {
     #swagger.summary = "로그아웃"
     #swagger.tags = ['Auth']
   */
-  await handleLogout(logoutRequestDto(req.cookies));
+  await logout(logoutRequestDto(req.cookies));
   clearTokenCookies(res);
   res.status(StatusCodes.OK).success(null);
 };
