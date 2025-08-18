@@ -23,18 +23,25 @@ model Users {
   id                      Int                       @id @default(autoincrement())
   email                   String                    @unique(map: "email") @db.VarChar(40)
   uid                     String                    @unique(map: "uid") @db.VarChar(300)
-  nickname                String                    @unique(map: "nickname") @db.VarChar(10)
-  grade                   Int                       
-  gender                  Gender
-  profileImg              String                    @map("profile_img") @db.VarChar(200)
+  nickname                String?                    @unique(map: "nickname") @db.VarChar(10)
+  grade                   Int?                       
+  gender                  Gender?
+  profileImg              String?                    @map("profile_img") @db.VarChar(200)
   createdAt               DateTime                  @map("created_at") @default(now())
   updatedAt               DateTime?                 @updatedAt @map("updated_at")
+  isCompleted             Boolean                   @map("is_completed") @default(false)
 
   events                  Events[]
   comments                Comments[]
   reviews                 Reviews[]
   eventApplications       EventApplications[]
   @@map("users")
+}
+
+model RefreshTokens {
+  id                      Int                       @id @default(autoincrement())
+  token                   String                    @db.Text
+  createdAt               DateTime                  @map("created_at") @default(now())
 }
 
 model Events {
