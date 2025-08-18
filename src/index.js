@@ -8,11 +8,10 @@ dotenv.config();
 
 const app = setupExpress();
 const port = process.env.PORT;
-
+setupFirebase();
 setupSwagger(app);
 app.use(router); // 라우터 설정
 setupCommonError(app);
-setupFirebase();
 app.listen(port, () => {
   console.log(`서버 열림 - 포트 : ${port}`);
 });
