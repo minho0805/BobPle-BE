@@ -1,38 +1,40 @@
-import * as repo from '../repository/application.repository.js';
+// src/events/application/service/application.service.js
 
-export async function apply(eventId, me){
-  const ev = await repo.findEvent(eventId);
-  if(!ev) throw new Error('event not found');
-  if(ev.startAt <= new Date()) throw new Error('already past');
+import {
+  findMyAppForEvent,
+  createApp,
+  deleteAppById as deleteAppByIdRepo, // ✅ 별칭으로 충돌 제거
+  listMine as listMineRepo,
+  countMine as countMineRepo,
+} from '../repository/application.repository.js';
 
-  // 중복 체크 (스키마상 eventId/creatorId가 @unique라 DB에서도 막히긴 함)
-  const exists = await repo.findMyAppForEvent(eventId, me.id);
-  if(exists) throw new Error('already applied');
+// (필요하다면) 이벤트 유효성 검사용
+// import { findEvent } from '../../event/repository/event.repository.js';
 
-  try{
-    return await repo.createApp(eventId, me.id);
-  }catch(e){
-    // unique 제약 위반 시 친절한 메시지로 변환
-    if (e.code === 'P2002') throw new Error('already applied');
-    throw e;
-  }
-}
+// 신청 생성
+export const apply = async (eventId, user) => {
+  const exists = await findMyAppForEvent(eventId, user.id);
+  if (exists) throw new Error('ALREADY_APPLIED');
 
-export async function cancel(eventId, applicationId, me){
-  const app = await repo.findAppById(applicationId);
-  if(!app) throw new Error('not applied');
-  if(app.creatorId !== me.id) throw new Error('forbidden');
-  if(app.eventId !== Number(eventId)) throw new Error('invalid application for event');
+  return await createApp(eventId, user.id);
+};
 
-  await repo.deleteAppById(applicationId);
-  return { id: Number(applicationId), canceled: true };
-}
+// 신청 취소
+export const cancel = async (eventId, applicationId, user) => {
+  return await deleteAppByIdRepo(applicationId);
+};
 
-export async function mine(me, q){
-  const page = Number(q.page || 1), size = Number(q.size || 10);
-  const [items, total] = await Promise.all([
-    repo.listMine(me.id, (page-1)*size, size),
-    repo.countMine(me.id),
+// 내 신청 목록
+export const mine = async (user, query = {}) => {
+  const page = Number(query.page ?? 1);
+  const size = Number(query.size ?? 10);
+  const take = size;
+  const skip = (page - 1) * size;
+
+  const [rows, total] = await Promise.all([
+    listMineRepo(user.id, skip, take),
+    countMineRepo(user.id),
   ]);
-  return { items, page, size, total };
-}
+
+  return { total, page, size, rows };
+};

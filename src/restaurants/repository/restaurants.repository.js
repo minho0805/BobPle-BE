@@ -1,4 +1,5 @@
-import { prisma } from '../../db/client.js';
+// src/restaurants/repository/restaurants.repository.js
+import { prisma } from '../../lib/prisma.js';
 
 // 목록 검색
 export async function search({ query, category, page, size }) {
@@ -14,8 +15,13 @@ export async function search({ query, category, page, size }) {
       skip: (page - 1) * size,
       take: size,
       select: {
-        id: true, name: true, category: true, address: true,
-        telephone: true, mapx: true, mapy: true,
+        id: true,
+        name: true,
+        category: true,
+        address: true,
+        telephone: true,
+        mapx: true, // longitude? (스키마 용어 확인)
+        mapy: true, // latitude?
       },
     }),
     prisma.restaurants.count({ where }),
@@ -24,7 +30,7 @@ export async function search({ query, category, page, size }) {
   return { items, total };
 }
 
-// 탭 카운트 (전체/한/중/일)
+// 탭 카운트
 export async function counts(query) {
   const whereBase = query ? { name: { contains: query, mode: 'insensitive' } } : {};
   const [all, kr, ch, jp] = await Promise.all([
