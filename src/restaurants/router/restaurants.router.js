@@ -1,7 +1,6 @@
 import express from "express";
+import { handleFetchRestaurants } from "../controller/restaurants.controller.js";
 
 const router = express.Router({ mergeParams: true });
-router.get("/", (req, res, next) => {
-  res.send("restaurants");
-});
+router.get("/", handleFetchRestaurants);
 export default router;
