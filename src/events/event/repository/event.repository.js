@@ -1,5 +1,6 @@
 // src/events/event/repository/event.repository.js
-import { prisma } from '../../../lib/prisma.js';
+import { PrismaClient } from '../../../generated/prisma/index.js';
+const prisma = new PrismaClient();
 
 export const findByIdWithParticipants = (id) =>
   prisma.events.findUnique({

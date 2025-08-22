@@ -1,26 +1,27 @@
-import {
-  apply  as applyService,
-  cancel as cancelService,
-  mine   as mineService,
-} from '../service/application.service.js';
+// src/events/application/controller/application.controller.js
+import { StatusCodes } from 'http-status-codes';
+import { apply, cancel, mine } from '../service/application.service.js';
 
-// 컨트롤러: 신청
-export const apply = async (req, res, next) => {
+// 신청 생성
+export const applyApplication = async (req, res, next) => {
   try {
-    return ok(res, await applyService(req.params.eventId, req.user));
+    const data = await apply(req.params.eventId, req.user);
+    return res.success(data, StatusCodes.CREATED); // 201
   } catch (e) { next(e); }
 };
 
-// 컨트롤러: 취소
-export const cancel = async (req, res, next) => {
+// 신청 취소
+export const cancelApplication = async (req, res, next) => {
   try {
-    return ok(res, await cancelService(req.params.eventId, req.params.applicationId, req.user));
+    const data = await cancel(req.params.eventId, req.params.applicationId, req.user);
+    return res.success(data, StatusCodes.OK);
   } catch (e) { next(e); }
 };
 
-// 컨트롤러: 내 신청 목록
-export const mine = async (req, res, next) => {
+// 내 신청 목록
+export const myApplications = async (req, res, next) => {
   try {
-    return ok(res, await mineService(req.user, req.query));
+    const data = await mine(req.user, req.query);
+    return res.success(data, StatusCodes.OK);
   } catch (e) { next(e); }
 };
