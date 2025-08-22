@@ -1,21 +1,24 @@
 // src/events/application/router/application.router.js
 import { Router } from 'express';
+import { auth } from '../../../auth/middleware/auth.middleware.js';
 import {
   applyApplication,
   cancelApplication,
   myApplications,
-} from '../controller/application.controller.js'; // <-- .js 필수 (ESM)
+} from '../controller/application.controller.js';
 
-const router = Router();
+const r = Router();
 
 // 신청 생성
-router.post('/api/events/:eventId/application', applyApplication);
+r.post('/events/:eventId/applications', auth, applyApplication);
 
-// 신청 취소
-router.delete('/api/events/:eventId/application/:applicationId/cancel', cancelApplication);
+// 신청 취소 (본인 취소)
+r.delete('/events/:eventId/applications/me', auth, cancelApplication);
 
+// 신청 취소 (호스트가 특정 신청자 취소)
+r.delete('/events/:eventId/applications/:creator_id', auth, cancelApplication);
 
-// 내 신청 목록
-router.get('/api/events/me', myApplications);
+// 내가 신청한 목록
+r.get('/me/applications', auth, myApplications);
 
-export default router;
+export default r;

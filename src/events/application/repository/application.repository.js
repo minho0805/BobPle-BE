@@ -1,62 +1,56 @@
 // src/events/application/repository/application.repository.js
-import { PrismaClient } from '../../../generated/prisma/index.js';
+import { PrismaClient } from '../../../generated/prisma'; // ⚠️ 경로는 프로젝트 구조에 맞게 조정
 const prisma = new PrismaClient();
 
-const toInt = (v, def=0) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : def;
-};
-
-/* 이벤트(밥약) 단건 조회 */
-export const findEventById = (id) =>
-  prisma.events.findUnique({ where: { id: toInt(id) } }); // 모델명 확인 필요 (events vs event)
-
-/* 특정 이벤트에서 내가 낸 신청 찾기 */
-export const findMyApplicationForEvent = (eventId, userId) =>
-  prisma.eventApplications.findFirst({
-    where: { eventId: toInt(eventId), creatorId: toInt(userId) },
+// 한 유저가 특정 이벤트에 신청했는지 조회
+export function findOneByPair({ event_id, applicant_id }) {
+  return prisma.eventApplications.findFirst({
+    where: {
+      eventId: event_id,
+      creatorId: applicant_id, // 신청자 = creatorId (스키마 그대로)
+    },
+    include: {
+      events: true, // 신청 대상 이벤트
+      users: true,  // 신청자
+    },
   });
+}
 
-/* 이벤트에 신청 생성 (P2002 중복키 처리 권장: 서비스에서 try/catch) */
-export const createApplication = (eventId, userId) =>
-  prisma.eventApplications.create({
-    data: { eventId: toInt(eventId), creatorId: toInt(userId) },
+// 신청 생성
+export function create({ event_id, applicant_id }) {
+  return prisma.eventApplications.create({
+    data: {
+      eventId: event_id,
+      creatorId: applicant_id,
+    },
   });
+}
 
-/* 신청 아이디로 단일 신청 찾기 */
-export const findApplicationById = (id) =>
-  prisma.eventApplications.findUnique({ where: { id: toInt(id) } });
-
-/* 신청 아이디로 신청 삭제 
-   - 보안 강화 버전: 사용자 본인 것만 삭제 (creatorId 검사)
-   - 복합 where가 불가하면 아래처럼 두 단계로 처리하거나, schema에 @@unique([id, creatorId]) 혹은 @@index 후 transaction으로 검증하세요.
-*/
-export const deleteApplication = async (id, userId) => {
-  // 1) 소유권 확인
-  const app = await prisma.eventApplications.findUnique({
-    where: { id: toInt(id) },
-    select: { id: true, creatorId: true },
+// 신청 삭제 (복수 가능성을 고려하여 deleteMany)
+export function deleteByPair({ event_id, applicant_id }) {
+  return prisma.eventApplications.deleteMany({
+    where: {
+      eventId: event_id,
+      creatorId: applicant_id,
+    },
   });
-  if (!app) return null;
-  if (app.creatorId !== toInt(userId)) {
-    const err = new Error('FORBIDDEN');
-    err.statusCode = 403;
-    throw err;
-  }
-  // 2) 삭제
-  return prisma.eventApplications.delete({ where: { id: app.id } });
-};
+}
 
-/* 내가 낸 신청 목록 (페이징) + 이벤트 정보 포함 */
-export const listMyApplications = (userId, skip, take) =>
-  prisma.eventApplications.findMany({
-    where: { creatorId: toInt(userId) },
-    include: { events: true }, // 리레이션 필드명 확인 (events vs event)
-    orderBy: { id: 'desc' },
-    skip: Math.max(0, toInt(skip)),
-    take: Math.max(1, toInt(take, 10)),
+// 내가 신청한 목록 (페이지네이션)
+export function findByApplicant({ applicant_id, skip = 0, take = 10 }) {
+  return prisma.eventApplications.findMany({
+    where: { creatorId: applicant_id },
+    include: {
+      events: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    skip,
+    take,
   });
+}
 
-/* 내가 낸 신청 개수 */
-export const countMyApplications = (userId) =>
-  prisma.eventApplications.count({ where: { creatorId: toInt(userId) } });
+export function countByApplicant({ applicant_id }) {
+  return prisma.eventApplications.count({
+    where: { creatorId: applicant_id },
+  });
+}
