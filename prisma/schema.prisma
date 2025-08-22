@@ -26,7 +26,7 @@ model Users {
   nickname                String?                   @unique(map: "nickname") @db.VarChar(10)
   grade                   Int?
   gender                  Gender?
-  profileImg              String?                   @map("profile_img") @db.VarChar(200)
+  profileImg              String?                   @map("profile_img") @db.Text
   createdAt               DateTime                  @map("created_at") @default(now())
   updatedAt               DateTime?                 @updatedAt @map("updated_at")
   isCompleted             Boolean                   @map("is_completed") @default(false)

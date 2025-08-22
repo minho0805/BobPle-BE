@@ -9,11 +9,13 @@ import {
   expireRefreshToken,
   findUserById,
   registerRefreshToken,
+  updateUser,
 } from "../repository/auth.repository.js";
 import {
   loginResponseDto,
   logoutResponseDto,
   refreshResponseDto,
+  updateProfileResponseDto,
 } from "../dto/response/auth.response.dto.js";
 import { InvalidInputValueError, InvalidTokenError } from "../../error.js";
 export const verifyIdToken = async (data) => {
@@ -33,13 +35,13 @@ export const verifyIdToken = async (data) => {
       nickname: user.nickname,
       grade: user.grade,
       gender: user.gender,
-      profileImg: user.profileImg,
       isCompleted: user.isCompleted,
     };
     const tokens = {
       access: generateAccessToken(payload),
       refresh: generateRefreshToken(payload),
     };
+    payload.profileImage = user.profileImg;
     await registerRefreshToken(tokens.refresh);
     return loginResponseDto({ tokens, payload });
   } catch (error) {
@@ -55,16 +57,20 @@ export const refresh = async (data) => {
   if (payload === null) {
     throw new InvalidTokenError("유효하지 않은 토큰 입니다.", null);
   }
-  const user = findUserById(payload.id);
+  const user = await findUserById(payload.id);
   const newPayload = {
     id: user.id,
     email: user.email,
     nickname: user.nickname,
     grade: user.grade,
     gender: user.gender,
-    profileImg: user.profileImg,
     isCompleted: user.isCompleted,
   };
   const accessToken = generateAccessToken(newPayload);
-  return refreshResponseDto({ accessToken });
+  newPayload.profileImage = user.profileImg;
+  return refreshResponseDto({ accessToken, newPayload });
+};
+export const updateProfile = async (data) => {
+  const updatedProfile = await updateUser(data);
+  return updateProfileResponseDto(updatedProfile);
 };
