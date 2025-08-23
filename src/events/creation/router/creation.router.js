@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { creation } from '../controller/creation.controller.js';
+import { createEvent } from '../controller/creation.controller.js';
 
 const r = Router();
-r.post('/creation', creation);
+r.post('/events', createEvent);
 export default r;

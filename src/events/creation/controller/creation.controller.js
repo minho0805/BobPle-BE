@@ -2,11 +2,10 @@ import { parseCreateBody } from '../dto/request/creation.request.dto.js';
 import * as svc from '../service/creation.service.js';
 import { StatusCodes } from 'http-status-codes';
 
-export async function creation(req, res, next) {
+export async function createEvent(req, res, next) {
   try {
-    const dto = parseCreateBody(req.body);
-    const data = await svc.creation(dto, req.user);
-    // return ok(res, data);
-    res.status(StatusCodes.OK).success(data);
+    const createDto = parseCreateBody(req.body); // ✅ 명확
+    const createdEvent = await svc.createEvent(createDto, req.user); // ✅ 동사+명사
+    res.status(StatusCodes.CREATED).success(createdEvent); // 생성이므로 201 권장
   } catch (e) { next(e); }
 }

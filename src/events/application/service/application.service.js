@@ -1,75 +1,70 @@
 // src/events/application/service/application.service.js
 import * as appRepo from '../repository/application.repository.js';
-import { PrismaClient } from '../../../generated/prisma'; // 경로 확인
+import { PrismaClient } from '../../../generated/prisma/index.js';
 const prisma = new PrismaClient();
 
-/**
- * 신청 생성
- * - creatorId(=신청자) = req.user.id
- * - eventId            = path param
- * - 자기 글에는 신청 불가
- * - 중복 신청 방지
- */
-export async function apply(eventId, user) {
-  const creatorId = user?.id; // 신청자
-  const evIdNum = Number(eventId);
+function toPosInt(n) {
+  const v = Number(n);
+  return Number.isInteger(v) && v > 0 ? v : NaN;
+}
 
-  if (!Number.isFinite(evIdNum)) throw new Error('INVALID_EVENT_ID');
+/** 신청 생성 */
+export async function apply(eventId, user) {
+  const creatorId = toPosInt(user?.id);
+  const evId = toPosInt(eventId);
+
+  if (!evId) throw new Error('INVALID_EVENT_ID');
   if (!creatorId) throw new Error('UNAUTHORIZED');
 
   // 이벤트 확인
-  const ev = await prisma.events.findUnique({ where: { id: evIdNum } });
+  const ev = await prisma.events.findUnique({ where: { id: evId } });
   if (!ev) throw new Error('EVENT_NOT_FOUND');
   if (ev.creatorId === creatorId) throw new Error('CANNOT_APPLY_OWN_EVENT');
 
-  // 중복 신청 체크
-  const exists = await appRepo.findOneByPair({ eventId: evIdNum, creatorId });
-  if (exists) return exists;
+  // ✅ 경쟁 조건 방지: 트랜잭션으로 확인+생성 묶기
+  return prisma.$transaction(async (tx) => {
+    const exists = await appRepo.findOneByPair({ eventId: evId, creatorId }, tx);
+    if (exists) return exists;
 
-  // 생성
-  return appRepo.create({ eventId: evIdNum, creatorId });
+    // unique 제약이 DB에 없다면(P2002 기대 불가) 서비스 레벨에서만 보장됨
+    return appRepo.create({ eventId: evId, creatorId }, tx);
+  });
 }
 
-/**
- * 신청 취소
- * - 기본: 본인(req.user.id) 취소
- * - 옵션: :creator_id 가 숫자면, 이벤트 호스트가 해당 신청자 취소 (호스트 권한 필요)
- */
+/** 신청 취소 */
 export async function cancel(eventId, creatorIdParam, user) {
-  const me = user?.id;
-  const evIdNum = Number(eventId);
-
-  if (!Number.isFinite(evIdNum)) throw new Error('INVALID_EVENT_ID');
+  const me = toPosInt(user?.id);
+  const evId = toPosInt(eventId);
+  if (!evId) throw new Error('INVALID_EVENT_ID');
   if (!me) throw new Error('UNAUTHORIZED');
 
-  const ev = await prisma.events.findUnique({ where: { id: evIdNum } });
+  const ev = await prisma.events.findUnique({ where: { id: evId } });
   if (!ev) throw new Error('EVENT_NOT_FOUND');
 
-  // 취소 대상 신청자 결정
+  // 취소 대상 결정
   let targetCreatorId;
   if (!creatorIdParam || creatorIdParam === 'me') {
     targetCreatorId = me;
   } else {
-    const parsed = Number(creatorIdParam);
-    if (!Number.isFinite(parsed)) throw new Error('INVALID_APPLICANT_ID');
+    const parsed = toPosInt(creatorIdParam);
+    if (!parsed) throw new Error('INVALID_APPLICANT_ID');
     if (ev.creatorId !== me) throw new Error('FORBIDDEN'); // 호스트만 타 유저 취소
     targetCreatorId = parsed;
   }
 
-  const result = await appRepo.deleteByPair({ eventId: evIdNum, creatorId: targetCreatorId });
+  const result = await appRepo.deleteByPair({ eventId: evId, creatorId: targetCreatorId });
+  // 정책 선택지:
+  // if (!result.count) throw new Error('APPLICATION_NOT_FOUND');
   return { deleted: result.count ?? 0 };
 }
 
-/**
- * 내가 신청한 목록
- * - 페이지네이션: ?page=1&size=10
- */
+/** 내가 신청한 목록 */
 export async function mine(user, query = {}) {
-  const creatorId = user?.id; // 신청자
+  const creatorId = toPosInt(user?.id);
   if (!creatorId) throw new Error('UNAUTHORIZED');
 
-  const page = Math.max(1, Number(query.page) || 1);
-  const size = Math.min(50, Math.max(1, Number(query.size) || 10));
+  const page = Math.max(1, toPosInt(query.page) || 1);
+  const size = Math.min(50, Math.max(1, toPosInt(query.size) || 10));
   const skip = (page - 1) * size;
   const take = size;
 

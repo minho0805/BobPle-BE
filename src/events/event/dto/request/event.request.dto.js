@@ -1,18 +1,18 @@
 // src/events/event/dto/request/event.request.dto.js
-const toInt = (v, def = 0) => {
+const toPosInt = (v, def = 0) => {
   const n = Number(v);
-  return Number.isFinite(n) ? n : def;
+  return Number.isInteger(n) && n > 0 ? n : def;
 };
 
 export function parseListQuery(query) {
-  const page = Math.max(1, toInt(query.page, 1));
-  const size = Math.min(50, Math.max(1, toInt(query.size, 10)));
+  const page = Math.max(1, toPosInt(query.page, 1));
+  const size = Math.min(50, Math.max(1, toPosInt(query.size, 10)));
   return { page, size };
 }
 
 export function parseEventIdParam(params) {
-  const eventId = toInt(params.eventId, NaN);
-  if (!Number.isFinite(eventId) || eventId <= 0) {
+  const eventId = toPosInt(params.eventId, NaN);
+  if (!Number.isFinite(eventId)) {
     const err = new Error('Invalid eventId');
     err.status = 400;
     throw err;
@@ -22,44 +22,56 @@ export function parseEventIdParam(params) {
 
 export function parseEditBody(body) {
   const out = {};
+
   if (body.title !== undefined) out.title = String(body.title).trim();
   if (body.content !== undefined) out.content = String(body.content).trim();
 
   if (body.restaurantId !== undefined) {
-    const n = toInt(body.restaurantId, NaN);
-    if (!Number.isFinite(n) || n <= 0) {
+    const n = toPosInt(body.restaurantId, NaN);
+    if (!Number.isFinite(n)) {
       const err = new Error('Invalid restaurantId');
       err.status = 400; throw err;
     }
     out.restaurantId = n;
   }
 
+  let startAtDate, endAtDate;
+
   if (body.startAt !== undefined) {
-    const d = new Date(body.startAt);
-    if (Number.isNaN(d.getTime())) {
+    startAtDate = new Date(body.startAt);
+    if (Number.isNaN(startAtDate.getTime())) {
       const err = new Error('Invalid startAt');
       err.status = 400; throw err;
     }
-    out.startAt = d; // Date 그대로 (service에서 그대로 저장)
+    out.startAt = startAtDate;
   }
+
   if (body.endAt !== undefined) {
-    const d = new Date(body.endAt);
-    if (Number.isNaN(d.getTime())) {
+    endAtDate = new Date(body.endAt);
+    if (Number.isNaN(endAtDate.getTime())) {
       const err = new Error('Invalid endAt');
       err.status = 400; throw err;
     }
-    out.endAt = d;
+    out.endAt = endAtDate;
+  }
+
+  // ✅ 서로 관계 검증 (둘 다 있을 때만)
+  if (startAtDate && endAtDate && endAtDate <= startAtDate) {
+    const err = new Error('endAt must be after startAt');
+    err.status = 400; throw err;
   }
 
   if (body.maxParticipants !== undefined) {
-    const n = toInt(body.maxParticipants, NaN);
-    if (!Number.isFinite(n) || n <= 0) {
+    const n = toPosInt(body.maxParticipants, NaN);
+    if (!Number.isFinite(n)) {
       const err = new Error('Invalid maxParticipants');
       err.status = 400; throw err;
     }
-    out.maxParticipants = n; // DB에 없으면 응답용으로만 활용 가능
+    out.maxParticipants = n; // 응답용
   }
 
-  if (body.status !== undefined) out.status = String(body.status);
+  // ⚠️ 스키마에 없는 필드는 무시 (또는 에러로 처리)
+  // if (body.status !== undefined) { ... } // Events에 없음 → 제거
+
   return out;
 }

@@ -1,17 +1,9 @@
-import { StatusCodes } from 'http-status-codes';
-import * as svc from '../service/event.service.js';
-import {
-  parseListQuery,
-  parseEventIdParam,
-  parseEditBody,
-} from '../dto/request/event.request.dto.js';
-
 // GET /api/events
 export async function list(req, res, next) {
   try {
     const dto = parseListQuery(req.query);
-    const data = await svc.list(dto);
-    return res.success(data, StatusCodes.OK);
+    const events = await svc.list(dto);
+    return res.success(events, StatusCodes.OK);
   } catch (e) { next(e); }
 }
 
@@ -19,26 +11,26 @@ export async function list(req, res, next) {
 export async function detail(req, res, next) {
   try {
     const { eventId } = parseEventIdParam(req.params);
-    const data = await svc.detail(eventId);
-    return res.success(data, StatusCodes.OK);
+    const event = await svc.detail(eventId);
+    return res.success(event, StatusCodes.OK);
   } catch (e) { next(e); }
 }
 
-// PATCH /api/events/:eventId/edit
+// PATCH /api/events/:eventId   ← /edit suffix 제거 권장
 export async function edit(req, res, next) {
   try {
     const { eventId } = parseEventIdParam(req.params);
     const body = parseEditBody(req.body);
-    const data = await svc.edit(eventId, body, req.user);
-    return res.success(data, StatusCodes.OK);
+    const updatedEvent = await svc.edit(eventId, body, req.user);
+    return res.success(updatedEvent, StatusCodes.OK);
   } catch (e) { next(e); }
 }
 
-// POST /api/events/:eventId/cancel
+// PATCH /api/events/:eventId/cancel   ← POST → PATCH 권장
 export async function cancel(req, res, next) {
   try {
     const { eventId } = parseEventIdParam(req.params);
-    const data = await svc.cancel(eventId, req.user);
-    return res.success(data, StatusCodes.OK);
+    const result = await svc.cancel(eventId, req.user);
+    return res.success(result, StatusCodes.OK);
   } catch (e) { next(e); }
 }

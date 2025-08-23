@@ -2,27 +2,56 @@
 import { PrismaClient } from '../../../generated/prisma/index.js';
 const prisma = new PrismaClient();
 
-export const findByIdWithParticipants = (id) =>
-  prisma.events.findUnique({
-    where: { id: Number(id) },
+/** 목록 조회 (페이지네이션, 최신순) */
+export function findMany(skip = 0, take = 6) {
+  return prisma.events.findMany({
+    skip,
+    take,
+    orderBy: { createdAt: 'desc' },
     include: {
-      users: { select: { id: true, nickname: true } }, // 작성자
+      users: { select: { id: true, nickname: true } }, // creator
+      restaurants: true,
+      eventApplications: true,
+    },
+  });
+}
+
+/** 전체 개수 */
+export function countAll() {
+  return prisma.events.count();
+}
+
+/** 상세 + 참가자 포함 */
+export function findByIdWithParticipants(eventId) {
+  const id = Number(eventId);
+  if (!Number.isInteger(id) || id <= 0) throw new Error('Invalid eventId');
+
+  return prisma.events.findUnique({
+    where: { id },
+    include: {
+      users: { select: { id: true, nickname: true } },   // creator
+      restaurants: true,                                  // ✅ 추가
       eventApplications: {
+        orderBy: { createdAt: 'asc' },                    // ✅ 정렬
         include: {
-          users: { select: { id: true, nickname: true } }, // 신청자
+          users: { select: { id: true, nickname: true } },// applicant
         },
-        orderBy: { id: 'asc' },
       },
     },
   });
+}
 
-export const findMany = (skip, take) =>
-  prisma.events.findMany({ orderBy: { id: 'desc' }, skip, take });
+/** 수정 */
+export function updateById(eventId, data) {
+  return prisma.events.update({
+    where: { id: Number(eventId) },
+    data,
+  });
+}
 
-export const countAll = () => prisma.events.count();
-
-export const updateById = (id, data) =>
-  prisma.events.update({ where: { id: Number(id) }, data });
-
-export const deleteById = (id) =>
-  prisma.events.delete({ where: { id: Number(id) } });
+/** 삭제 */
+export function deleteById(eventId) {
+  return prisma.events.delete({
+    where: { id: Number(eventId) },
+  });
+}
