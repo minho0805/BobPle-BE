@@ -1,54 +1,36 @@
-// src/events/event/controller/event.controller.js
-import { PrismaClient } from '@prisma/client';
-
-// 전역 싱글톤 (개발 중 핫리로드 시 중복 생성 방지)
-const prisma = globalThis.__prisma ?? new PrismaClient();
-if (!globalThis.__prisma) globalThis.__prisma = prisma;
-// 쿼리 파서(내장): page, size, keyword, restaurantId, orderBy
-function parseListQuery(q = {}) {
-  const page = Math.max(parseInt(q.page ?? '1', 10) || 1, 1);
-  const sizeRaw = parseInt(q.size ?? '10', 10) || 10;
-  const size = Math.min(Math.max(sizeRaw, 1), 50); // 1~50
-  const orderBy = (q.orderBy === 'oldest') ? 'asc' : 'desc';
-  const restaurantId = q.restaurantId ? Number(q.restaurantId) : undefined;
-  const keyword = (q.keyword ?? '').trim();
-
-  return { page, size, orderBy, restaurantId, keyword };
-}
-
+// GET /api/events
 export async function list(req, res, next) {
   try {
-    const { page, size, orderBy, restaurantId, keyword } = parseListQuery(req.query);
+    const dto = parseListQuery(req.query);
+    const events = await svc.list(dto);
+    return res.success(events, StatusCodes.OK);
+  } catch (e) { next(e); }
+}
 
-    const where = {};
-    if (restaurantId) where.restaurant_id = restaurantId;
-    if (keyword) {
-      where.OR = [
-        { title:   { contains: keyword } },
-        { content: { contains: keyword } },
-      ];
-    }
+// GET /api/events/:eventId
+export async function detail(req, res, next) {
+  try {
+    const { eventId } = parseEventIdParam(req.params);
+    const event = await svc.detail(eventId);
+    return res.success(event, StatusCodes.OK);
+  } catch (e) { next(e); }
+}
 
-    const skip = (page - 1) * size;
+// PATCH /api/events/:eventId   ← /edit suffix 제거 권장
+export async function edit(req, res, next) {
+  try {
+    const { eventId } = parseEventIdParam(req.params);
+    const body = parseEditBody(req.body);
+    const updatedEvent = await svc.edit(eventId, body, req.user);
+    return res.success(updatedEvent, StatusCodes.OK);
+  } catch (e) { next(e); }
+}
 
-    const [items, total] = await Promise.all([
-      prisma.events.findMany({
-        where,
-        orderBy: { id: orderBy },     // 필요시 created_at 등으로 교체
-        skip,
-        take: size,
-      }),
-      prisma.events.count({ where }),
-    ]);
-
-    return res.json({
-      resultType: 'SUCCESS',
-      error: null,
-      success: {
-        page, size, total, items,
-      },
-    });
-  } catch (e) {
-    return next(e);
-  }
+// PATCH /api/events/:eventId/cancel   ← POST → PATCH 권장
+export async function cancel(req, res, next) {
+  try {
+    const { eventId } = parseEventIdParam(req.params);
+    const result = await svc.cancel(eventId, req.user);
+    return res.success(result, StatusCodes.OK);
+  } catch (e) { next(e); }
 }
