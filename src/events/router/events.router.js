@@ -82,6 +82,7 @@ function parseEventId(req, res, next) {
 }
 
 /* ──────────── 라우터 ──────────── */
+// 목록
 r.get("/", async (req, res, next) => {
   try {
     const page = Number(req.query.page) || 1;
@@ -93,7 +94,8 @@ r.get("/", async (req, res, next) => {
   }
 });
 
-r.put("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
+// 상세 (✅ GET, 숫자만 허용)
+r.get("/:eventId(\\d+)", parseEventId, async (req, res, next) => {
   try {
     const data = await detail(req.eventId);
     return res.success ? res.success(data, 200) : res.status(200).json(data);
@@ -102,6 +104,7 @@ r.put("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   }
 });
 
+// 수정 (✅ PUT)
 r.put("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   try {
     const data = await edit(req.eventId, req.body, req.user);
@@ -111,6 +114,7 @@ r.put("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   }
 });
 
+// 취소 (✅ DELETE)
 r.delete("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   try {
     const data = await cancel(req.eventId, req.user);
@@ -118,6 +122,11 @@ r.delete("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+// 기타 잘못된 경로는 404
+r.all("*", (_req, res) => {
+  res.status(404).json({ ok: false, error: "NOT_FOUND" });
 });
 
 export default r;
