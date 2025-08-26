@@ -1,4 +1,4 @@
-// src/events/router/event.router.js
+// src/events/event/router/event.router.js
 /*
   #swagger.components = {
     securitySchemes: {
@@ -11,9 +11,12 @@
   }
 */
 import { Router } from "express";
-import { list, detail, edit, cancel } from "../service/event.service.js";
+import { list, detail, edit, cancel } from "../../service/event.service.js"; // ← 경로 주의: event.router.js 기준으로 ../.. 올라감
 
 const r = Router();
+
+// (선택) 로드 확인용
+console.log("[events] event.router.js loaded");
 
 /* ✅ auth 미들웨어 동적 로딩 + 개발 우회 지원(Skip) */
 let _authFn = null;
@@ -108,36 +111,6 @@ r.get("/", async (req, res, next) => {
       in: 'query', required: false, schema: { type: 'integer', default: 6 },
       description: '페이지 크기(기본 6)'
     }
-    #swagger.responses[200] = {
-      description: '목록/페이지네이션 응답',
-      content: {
-        "application/json": {
-          schema: {
-            type: 'object',
-            properties: {
-              page:  { type: 'integer', example: 1 },
-              size:  { type: 'integer', example: 6 },
-              total: { type: 'integer', example: 25 },
-              items: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id:           { type: 'integer', example: 1 },
-                    title:        { type: 'string',  example: '점심 같이 드실 분' },
-                    content:      { type: 'string',  example: '...' },
-                    restaurantId: { type: 'integer', example: 3 },
-                    startAt:      { type: 'string',  format: 'date-time', example: '2025-08-23T12:00:00.000Z' },
-                    endAt:        { type: 'string',  format: 'date-time', example: '2025-08-23T13:00:00.000Z' },
-                    creatorId:    { type: 'integer', example: 5 }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
   */
   try {
     const page = Number(req.query.page) || 1;
@@ -159,11 +132,6 @@ r.get("/:eventId", parseEventId, async (req, res, next) => {
     #swagger.parameters['eventId'] = {
       in: 'path', required: true, schema: { type: 'integer' }, description: '이벤트 ID'
     }
-    #swagger.responses[200] = {
-      description: '상세 응답',
-      content: { "application/json": { schema: { $ref: "#/components/schemas/EventDetail" } } }
-    }
-    #swagger.responses[404] = { description: 'not found' }
   */
   try {
     const data = await detail(req.eventId);
@@ -181,15 +149,6 @@ r.put("/:eventId", authMw, parseEventId, async (req, res, next) => {
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 전체 수정'
     #swagger.security = [{ bearerAuth: [] }]
-    #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer' } }
-    #swagger.requestBody = {
-      required: true,
-      content: { "application/json": { schema: { $ref: "#/components/schemas/EventUpdate" } } }
-    }
-    #swagger.responses[200] = {
-      description: '수정된 이벤트',
-      content: { "application/json": { schema: { $ref: "#/components/schemas/EventDetail" } } }
-    }
   */
   try {
     const data = await edit(req.eventId, req.body, req.user);
@@ -207,8 +166,6 @@ r.delete("/:eventId", authMw, parseEventId, async (req, res, next) => {
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 취소(삭제)'
     #swagger.security = [{ bearerAuth: [] }]
-    #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer' } }
-    #swagger.responses[200] = { description: '삭제/취소 성공' }
   */
   try {
     const data = await cancel(req.eventId, req.user);
