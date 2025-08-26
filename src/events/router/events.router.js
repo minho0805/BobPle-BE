@@ -7,7 +7,7 @@
   }
 */
 import { Router } from "express";
-import { list, detail, edit, cancel } from "../service/event.service.js";
+import { list, detail, edit, cancel } from "../event/service/event.service.js";
 
 const r = Router();
 
