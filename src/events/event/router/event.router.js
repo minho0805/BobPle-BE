@@ -1,3 +1,4 @@
+// src/events/router/event.router.js
 /*
   #swagger.components = {
     securitySchemes: {
@@ -62,7 +63,6 @@ async function authMw(req, res, next) {
 
     return _authFn(req, res, (err) => {
       if (err) return next(err);
-
       // req.payload → req.user 매핑 보정
       if (!req.user && req.payload) {
         const p = req.payload;
@@ -78,6 +78,18 @@ async function authMw(req, res, next) {
   } catch (e) {
     next(e);
   }
+}
+
+/* 공통 유틸: eventId 파라미터 검증 */
+function parseEventId(req, res, next) {
+  const eventId = Number(req.params.eventId);
+  if (!Number.isInteger(eventId) || eventId <= 0) {
+    const err = new Error("INVALID_EVENT_ID");
+    err.status = 400;
+    return next(err);
+  }
+  req.eventId = eventId;
+  next();
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -128,7 +140,9 @@ r.get("/", async (req, res, next) => {
     }
   */
   try {
-    const data = await list(req.query);
+    const page = Number(req.query.page) || 1;
+    const size = Number(req.query.size) || 6;
+    const data = await list({ ...req.query, page, size });
     return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
@@ -138,18 +152,21 @@ r.get("/", async (req, res, next) => {
 /* ──────────────────────────────────────────────────────────────
    상세 조회  GET /api/events/:eventId
    ────────────────────────────────────────────────────────────── */
-r.get("/:eventId", async (req, res, next) => {
+r.get("/:eventId", parseEventId, async (req, res, next) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 상세 조회'
     #swagger.parameters['eventId'] = {
       in: 'path', required: true, schema: { type: 'integer' }, description: '이벤트 ID'
     }
-    #swagger.responses[200] = { description: '상세 응답' }
+    #swagger.responses[200] = {
+      description: '상세 응답',
+      content: { "application/json": { schema: { $ref: "#/components/schemas/EventDetail" } } }
+    }
     #swagger.responses[404] = { description: 'not found' }
   */
   try {
-    const data = await detail(Number(req.params.eventId));
+    const data = await detail(req.eventId);
     return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
@@ -157,17 +174,25 @@ r.get("/:eventId", async (req, res, next) => {
 });
 
 /* ──────────────────────────────────────────────────────────────
-   수정  PATCH /api/events/:eventId  (인증 필요)
+   전체 수정  PUT /api/events/:eventId  (인증 필요)
    ────────────────────────────────────────────────────────────── */
-r.patch("/:eventId", authMw, async (req, res, next) => {
+r.put("/:eventId", authMw, parseEventId, async (req, res, next) => {
   /*
     #swagger.tags = ['Events']
-    #swagger.summary = '밥약 이벤트 수정'
+    #swagger.summary = '밥약 이벤트 전체 수정'
     #swagger.security = [{ bearerAuth: [] }]
     #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer' } }
+    #swagger.requestBody = {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/EventUpdate" } } }
+    }
+    #swagger.responses[200] = {
+      description: '수정된 이벤트',
+      content: { "application/json": { schema: { $ref: "#/components/schemas/EventDetail" } } }
+    }
   */
   try {
-    const data = await edit(Number(req.params.eventId), req.body, req.user);
+    const data = await edit(req.eventId, req.body, req.user);
     return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
@@ -177,15 +202,16 @@ r.patch("/:eventId", authMw, async (req, res, next) => {
 /* ──────────────────────────────────────────────────────────────
    취소/삭제  DELETE /api/events/:eventId  (인증 필요)
    ────────────────────────────────────────────────────────────── */
-r.delete("/:eventId", authMw, async (req, res, next) => {
+r.delete("/:eventId", authMw, parseEventId, async (req, res, next) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 취소(삭제)'
     #swagger.security = [{ bearerAuth: [] }]
     #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer' } }
+    #swagger.responses[200] = { description: '삭제/취소 성공' }
   */
   try {
-    const data = await cancel(Number(req.params.eventId), req.user);
+    const data = await cancel(req.eventId, req.user);
     return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
