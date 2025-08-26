@@ -1,6 +1,6 @@
-// src/events/creation/router/creation.router.js
-import { Router } from 'express';
-import { createEvent } from '../controller/creation.controller.js';
+// 위치 : src/events/creation/router/creation.router.js
+import { Router } from "express";
+import { createEvent } from "../controller/creation.controller.js";
 
 const r = Router();
 
@@ -9,16 +9,16 @@ let _authFn = null;
 async function authMw(req, res, next) {
   try {
     // 개발용: .env 에 SKIP_AUTH=1 넣으면 인증 우회
-    if (process.env.SKIP_AUTH === '1') {
-      req.user = { id: 1, isCompleted: true, nickname: 'tester1' };
+    if (process.env.SKIP_AUTH === "1") {
+      req.user = { id: 1, isCompleted: true, nickname: "tester1" };
       return next();
     }
 
     if (!_authFn) {
-      const mod = await import('../../../auth/middleware/auth.middleware.js');
+      const mod = await import("../../../auth/middleware/auth.middleware.js");
       const base = mod.authenticateAccessToken || mod.auth || mod.default;
-      if (typeof base !== 'function') {
-        const err = new Error('AUTH_MIDDLEWARE_NOT_FOUND');
+      if (typeof base !== "function") {
+        const err = new Error("AUTH_MIDDLEWARE_NOT_FOUND");
         err.status = 500;
         throw err;
       }
@@ -33,7 +33,7 @@ async function authMw(req, res, next) {
         const p = req.payload;
         req.user = (p?.user || p) ?? null;
         if (!req.user?.id) {
-          const e = new Error('UNAUTHORIZED');
+          const e = new Error("UNAUTHORIZED");
           e.status = 401;
           return next(e);
         }
@@ -93,6 +93,6 @@ async function authMw(req, res, next) {
  *       401:
  *         description: 인증 필요
  */
-r.post('/events/creation', authMw, createEvent);   // 최종 경로: POST /api/events/creation
+r.post("/events/creation", authMw, createEvent); // 최종 경로: POST /api/events/creation
 
 export default r;
