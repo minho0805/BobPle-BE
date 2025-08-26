@@ -1,14 +1,16 @@
-import express from "express";
+import { Router } from "express";
 import creationRouter from "../creation/router/creation.router.js";
-import applicationRouter from "../application/router/application.router.js";
-import commentsRouter from "../comments/router/comments.router.js";
 import eventRouter from "../event/router/event.router.js";
+import applicationRouter from "../application/router/application.router.js";
+import restaurantsRouter from "../../restaurants/router/restaurants.router.js";
+// import commentsRouter from "../comments/router/comment.router.js"
 
-const router = express.Router({ mergeParams: true });
+const r = Router();
 
-router.use("/", eventRouter);
-router.use("/creation", creationRouter);
-router.use("/:eventId/application", applicationRouter);
-router.use("/:eventId/comments", commentsRouter);
+// /api/events 하위
+r.use("/", eventRouter); // 리스트/상세/수정/취소
+r.use("/", creationRouter); // 생성
+r.use("/", applicationRouter); // 신청/신청취소/내 신청
+r.use("/restaurants", restaurantsRouter); // 식당 검색
 
-export default router;
+export default r;
