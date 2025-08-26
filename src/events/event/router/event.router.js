@@ -28,7 +28,7 @@ async function authMw(req, res, next) {
       return next(err);
     }
 
-    // 개발 환경 우회
+    // 개발 환경에서만 우회 허용
     if (
       process.env.SKIP_AUTH === "1" &&
       process.env.NODE_ENV !== "production"
@@ -62,6 +62,8 @@ async function authMw(req, res, next) {
 
     return _authFn(req, res, (err) => {
       if (err) return next(err);
+
+      // req.payload → req.user 매핑 보정
       if (!req.user && req.payload) {
         const p = req.payload;
         req.user = (p?.user || p) ?? null;
@@ -143,44 +145,7 @@ r.get("/:eventId", async (req, res, next) => {
     #swagger.parameters['eventId'] = {
       in: 'path', required: true, schema: { type: 'integer' }, description: '이벤트 ID'
     }
-    #swagger.responses[200] = {
-      description: '상세 응답',
-      content: {
-        "application/json": {
-          schema: {
-            type: 'object',
-            properties: {
-              id:           { type: 'integer', example: 1 },
-              title:        { type: 'string',  example: '점심 구해요' },
-              content:      { type: 'string',  example: '...' },
-              restaurantId: { type: 'integer', example: 3 },
-              startAt:      { type: 'string',  format: 'date-time', example: '2025-08-23T12:00:00.000Z' },
-              endAt:        { type: 'string',  format: 'date-time', example: '2025-08-23T13:00:00.000Z' },
-              creator: {
-                type: 'object',
-                properties: {
-                  id:       { type: 'integer', example: 5 },
-                  nickname: { type: 'string',  example: 'minho' }
-                }
-              },
-              participants_count: { type: 'integer', example: 2 },
-              participants: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id:            { type: 'integer', example: 7 },
-                    nickname:      { type: 'string',  example: 'alice' },
-                    applicationId: { type: 'integer', example: 11 }
-                  }
-                }
-              },
-              chatUrl: { type: 'string', example: '/chats/event/1' }
-            }
-          }
-        }
-      }
-    }
+    #swagger.responses[200] = { description: '상세 응답' }
     #swagger.responses[404] = { description: 'not found' }
   */
   try {
@@ -200,33 +165,6 @@ r.patch("/:eventId", authMw, async (req, res, next) => {
     #swagger.summary = '밥약 이벤트 수정'
     #swagger.security = [{ bearerAuth: [] }]
     #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer' } }
-    #swagger.requestBody = {
-      required: true,
-      content: {
-        "application/json": {
-          schema: {
-            type: 'object',
-            properties: {
-              title:        { type: 'string',  example: '제목 수정' },
-              content:      { type: 'string',  example: '내용 수정' },
-              restaurantId: { type: 'integer', example: 2 },
-              startAt:      { type: 'string',  format: 'date-time', example: '2025-08-26T12:30:00.000Z' },
-              endAt:        { type: 'string',  format: 'date-time', example: '2025-08-26T13:30:00.000Z' }
-            },
-            additionalProperties: false
-          }
-        }
-      }
-    }
-    #swagger.responses[200] = {
-      description: '수정 성공',
-      content: { "application/json": { schema: { type: 'object', example: {
-        id: 19, title: '제목 수정', content: '내용 수정', restaurantId: 2,
-        startAt: '2025-08-26T12:30:00.000Z', endAt: '2025-08-26T13:30:00.000Z',
-        updatedAt: '2025-08-26T12:40:00.000Z'
-      }}}}
-    }
-    #swagger.responses[403] = { description: 'FORBIDDEN' }
   */
   try {
     const data = await edit(Number(req.params.eventId), req.body, req.user);
@@ -245,11 +183,6 @@ r.delete("/:eventId", authMw, async (req, res, next) => {
     #swagger.summary = '밥약 이벤트 취소(삭제)'
     #swagger.security = [{ bearerAuth: [] }]
     #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer' } }
-    #swagger.responses[200] = {
-      description: '삭제 결과',
-      content: { "application/json": { schema: { type: 'object', example: { id: 19, canceled: true } } } }
-    }
-    #swagger.responses[403] = { description: 'FORBIDDEN' }
   */
   try {
     const data = await cancel(Number(req.params.eventId), req.user);
