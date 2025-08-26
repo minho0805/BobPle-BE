@@ -15,18 +15,45 @@ import { list, detail, edit, cancel } from "../service/event.service.js";
 const r = Router();
 
 /* ✅ auth 미들웨어 동적 로딩 + 개발 우회 지원(Skip) */
+/* 인증 동적로딩 + 개발우회 */
 let _authFn = null;
 async function authMw(req, res, next) {
   try {
-    // 개발 편의: .env에 SKIP_AUTH=1 설정 시 인증 우회
-    if (process.env.SKIP_AUTH === "1") {
-      req.user = { id: 1, nickname: "tester1", isCompleted: true };
+    // ✅ 프로덕션 강제 차단: 실수로 우회 켜고 배포하면 서버가 뜨지 않게
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.SKIP_AUTH === "1"
+    ) {
+      const err = new Error("SKIP_AUTH must not be enabled in production");
+      err.status = 500;
+      return next(err); // 또는 process.exit(1) 을 서버 부팅 시점에 적용
+    }
+
+    // ✅ 개발 환경에서만 우회 허용
+    if (
+      process.env.SKIP_AUTH === "1" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      if (!req.user) {
+        // 필요시 .env 에서 DEV_FAKE_USER_ID 로 바꿀 수 있게
+        const fakeId = Number(process.env.DEV_FAKE_USER_ID || 1);
+        req.user = {
+          id: fakeId,
+          isCompleted: true,
+          nickname: "tester" + fakeId,
+        };
+        // 선택: 한 번만 경고 로그
+        if (!global.__authBypassWarned) {
+          console.warn("[WARN] Auth bypass enabled (SKIP_AUTH=1) — dev only");
+          global.__authBypassWarned = true;
+        }
+      }
       return next();
     }
 
+    // ✅ 실제 인증 미들웨어 동적 로딩
     if (!_authFn) {
       const mod = await import("../../../auth/middleware/auth.middleware.js");
-      // named > default 우선순위
       const base = mod.authenticateAccessToken || mod.auth || mod.default;
       if (typeof base !== "function") {
         const err = new Error("AUTH_MIDDLEWARE_NOT_FOUND");
@@ -39,15 +66,16 @@ async function authMw(req, res, next) {
     return _authFn(req, res, (err) => {
       if (err) return next(err);
 
-      // (필요 시) 기존 미들웨어가 req.payload를 채우는 경우 매핑
+      // auth.middleware.js 가 req.payload만 채우는 구조라면 user로 매핑
       if (!req.user && req.payload) {
         const p = req.payload;
+        // payload 구조에 맞게 매핑 (예: { id, isCompleted, nickname } 등)
         req.user = (p?.user || p) ?? null;
-      }
-      if (!req.user?.id) {
-        const e = new Error("UNAUTHORIZED");
-        e.status = 401;
-        return next(e);
+        if (!req.user?.id) {
+          const e = new Error("UNAUTHORIZED");
+          e.status = 401;
+          return next(e);
+        }
       }
       next();
     });
