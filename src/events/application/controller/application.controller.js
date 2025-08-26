@@ -2,7 +2,7 @@
 import { StatusCodes } from "http-status-codes";
 import { apply, cancel, mine } from "../service/application.service.js";
 
-/** 공통 실패 응답 헬퍼 — 전역 핸들러를 안 건드리고 동일한 포맷 유지 */
+/** 공통 실패 응답 헬퍼 */
 function fail(res, status, errorCode, reason, data = null) {
   return res.status(status).json({
     resultType: "FAIL",
@@ -23,14 +23,13 @@ function parseId(raw, name = "id") {
   return n;
 }
 
-// 신청 생성
+// ───────── 신청 생성 ─────────
 export const applyApplication = async (req, res, next) => {
   try {
     const eventId = parseId(req.params.eventId, "event_id");
     const application = await apply(eventId, req.user);
     return res.success(application, StatusCodes.CREATED); // 201
   } catch (e) {
-    // 서비스에서 던지는 신호를 여기서만 매핑 (핵심 공용 파일 수정 X)
     if (e?.code === "EVENT_NOT_FOUND" || e?.message === "EVENT_NOT_FOUND") {
       return fail(
         res,
@@ -50,17 +49,16 @@ export const applyApplication = async (req, res, next) => {
         e.message ?? "BAD_REQUEST",
       );
     }
-    // 나머지는 전역 에러핸들러로
     next(e);
   }
 };
 
-/* 밥약 신청 취소 */
+// ───────── 신청 취소(내 신청/호스트 특정 취소 모두) ─────────
 export const cancelApplication = async (req, res, next) => {
   try {
     const eventId = parseId(req.params.eventId, "event_id");
 
-    // 호스트가 특정 신청자 취소: 숫자, 내 신청 취소: "me"
+    // 호스트가 특정 신청자 취소면 숫자, 내 신청 취소면 "me"
     const creatorIdRaw = req.params.creatorId;
     const creatorId =
       creatorIdRaw === undefined || creatorIdRaw === "me"
@@ -68,9 +66,11 @@ export const cancelApplication = async (req, res, next) => {
         : parseId(creatorIdRaw, "creator_id");
 
     const result = await cancel(eventId, creatorId, req.user);
-    return res.success(result, StatusCodes.OK);
+    return res.success(result, StatusCodes.OK); // 200
   } catch (e) {
-    if (e?.code === "EVENT_NOT_FOUND" || e?.message === "EVENT_NOT_FOUND") {
+    const code = e?.code || e?.message;
+
+    if (code === "EVENT_NOT_FOUND") {
       return fail(
         res,
         StatusCodes.NOT_FOUND,
@@ -78,13 +78,23 @@ export const cancelApplication = async (req, res, next) => {
         "EVENT_NOT_FOUND",
       );
     }
-    // (선택) 서비스에서 아래 같은 코드가 온다면 매핑
-    if (e?.code === "APPLICATION_NOT_FOUND") {
+    if (code === "APPLICATION_NOT_FOUND") {
       return fail(
         res,
         StatusCodes.NOT_FOUND,
         "APPLICATION_NOT_FOUND",
         "APPLICATION_NOT_FOUND",
+      );
+    }
+    if (code === "FORBIDDEN") {
+      return fail(res, StatusCodes.FORBIDDEN, "FORBIDDEN", "FORBIDDEN");
+    }
+    if (code === "UNAUTHORIZED") {
+      return fail(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        "UNAUTHORIZED",
+        "UNAUTHORIZED",
       );
     }
     if (
@@ -102,7 +112,7 @@ export const cancelApplication = async (req, res, next) => {
   }
 };
 
-// 내 신청 목록
+// ───────── 내 신청 목록 ─────────
 export const myApplications = async (req, res, next) => {
   try {
     const applications = await mine(req.user, req.query);

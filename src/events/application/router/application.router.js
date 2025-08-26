@@ -19,11 +19,13 @@ const r = Router();
 let _authFn = null;
 async function authMw(req, res, next) {
   try {
+    // 개발 우회
     if (process.env.SKIP_AUTH === "1") {
       req.user = { id: 1, isCompleted: true, nickname: "tester1" };
       return next();
     }
 
+    // 동적 로딩(캐시)
     if (!_authFn) {
       const mod = await import("../../../auth/middleware/auth.middleware.js");
       const base = mod.authenticateAccessToken || mod.auth || mod.default;
@@ -38,7 +40,7 @@ async function authMw(req, res, next) {
     return _authFn(req, res, (err) => {
       if (err) return next(err);
 
-      // 토큰 미들웨어가 req.payload만 채운 경우 대비 매핑
+      // 토큰 미들웨어가 req.payload만 채웠을 때 보정
       if (!req.user && req.payload) {
         const p = req.payload;
         req.user = (p?.user || p) ?? null;
@@ -90,9 +92,7 @@ async function authMw(req, res, next) {
   #swagger.responses[401] = { description: '인증 필요' }
   #swagger.responses[404] = { description: '이벤트가 존재하지 않음' }
 */
-r.post("/:eventId/applications", authMw, (req, res, next) =>
-  applyApplication(req, res, next),
-);
+r.post("/:eventId/applications", authMw, applyApplication);
 
 /* ─────────────────────────  내 신청 취소  ───────────────────────── */
 /*
@@ -112,9 +112,7 @@ r.post("/:eventId/applications", authMw, (req, res, next) =>
     }}}}
   }
 */
-r.delete("/:eventId/applications/me", authMw, (req, res, next) =>
-  cancelApplication(req, res, next),
-);
+r.delete("/:eventId/applications/me", authMw, cancelApplication);
 
 /* ───────────────────  호스트가 특정 신청자 취소  ─────────────────── */
 /*
@@ -138,9 +136,7 @@ r.delete("/:eventId/applications/me", authMw, (req, res, next) =>
   }
   #swagger.responses[403] = { description: 'FORBIDDEN (호스트 아님)' }
 */
-r.delete("/:eventId/applications/:creatorId", authMw, (req, res, next) =>
-  cancelApplication(req, res, next),
-);
+r.delete("/:eventId/applications/:creatorId", authMw, cancelApplication);
 
 /* ─────────────────────────  내가 신청한 목록  ───────────────────────── */
 /*
@@ -168,8 +164,49 @@ r.delete("/:eventId/applications/:creatorId", authMw, (req, res, next) =>
     }}}}
   }
 */
-r.get("/me/applications", authMw, (req, res, next) =>
-  myApplications(req, res, next),
+r.get("/me/applications", authMw, myApplications);
+
+r.delete(
+  "/:eventId/application/:applicationId/cancel",
+  authMw,
+  async (req, res, next) => {
+    try {
+      const eventId = Number(req.params.eventId);
+      const applicationId = Number(req.params.applicationId);
+      if (!Number.isInteger(eventId) || !Number.isInteger(applicationId)) {
+        return res.fail(
+          { errorCode: "BAD_REQUEST", reason: "INVALID_PATH" },
+          400,
+        );
+      }
+
+      // 권한: 본인 신청이거나, 이벤트 작성자만 허용
+      // repo 에 단건 조회 추가 필요 (아래 참고)
+      const app = await appRepo.findById(applicationId);
+      if (!app || app.eventId !== eventId) {
+        return res.fail(
+          {
+            errorCode: "APPLICATION_NOT_FOUND",
+            reason: "APPLICATION_NOT_FOUND",
+          },
+          404,
+        );
+      }
+
+      // 이벤트 작성자 확인
+      const ev = await eventRepo.findById(eventId);
+      const isHost = ev?.creatorId === req.user.id;
+      const isOwner = app.creatorId === req.user.id;
+      if (!isHost && !isOwner) {
+        return res.fail({ errorCode: "FORBIDDEN", reason: "FORBIDDEN" }, 403);
+      }
+
+      const result = await appRepo.deleteById(applicationId);
+      return res.success({ deleted: result?.count ?? (result ? 1 : 0) }, 200);
+    } catch (e) {
+      next(e);
+    }
+  },
 );
 
 export default r;

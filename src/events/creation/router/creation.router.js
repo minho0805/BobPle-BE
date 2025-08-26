@@ -67,7 +67,14 @@ async function authMw(req, res, next) {
     }
   }
 
-  #swagger.responses[201] = { description: "생성 성공" }
+  #swagger.responses[201] = {
+    description: '생성 성공',
+    content: {"application/json": {schema: {example: {
+      resultType: "SUCCESS",
+      error: null,
+      success: { id: 18, creatorId: 1, title: "테스트 이벤트", startAt: "2025-08-26T12:00:00.000Z", endAt: "2025-08-26T13:00:00.000Z" }
+    }}}}
+  }
   #swagger.responses[400] = { description: "검증 실패" }
   #swagger.responses[401] = { description: "인증 필요" }
 */
