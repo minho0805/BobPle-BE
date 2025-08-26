@@ -15,34 +15,31 @@ import { list, detail, edit, cancel } from "../service/event.service.js";
 const r = Router();
 
 /* ✅ auth 미들웨어 동적 로딩 + 개발 우회 지원(Skip) */
-/* 인증 동적로딩 + 개발우회 */
 let _authFn = null;
 async function authMw(req, res, next) {
   try {
-    // ✅ 프로덕션 강제 차단: 실수로 우회 켜고 배포하면 서버가 뜨지 않게
+    // 프로덕션에서 우회 방지
     if (
       process.env.NODE_ENV === "production" &&
       process.env.SKIP_AUTH === "1"
     ) {
       const err = new Error("SKIP_AUTH must not be enabled in production");
       err.status = 500;
-      return next(err); // 또는 process.exit(1) 을 서버 부팅 시점에 적용
+      return next(err);
     }
 
-    // ✅ 개발 환경에서만 우회 허용
+    // 개발 환경 우회
     if (
       process.env.SKIP_AUTH === "1" &&
       process.env.NODE_ENV !== "production"
     ) {
       if (!req.user) {
-        // 필요시 .env 에서 DEV_FAKE_USER_ID 로 바꿀 수 있게
         const fakeId = Number(process.env.DEV_FAKE_USER_ID || 1);
         req.user = {
           id: fakeId,
           isCompleted: true,
           nickname: "tester" + fakeId,
         };
-        // 선택: 한 번만 경고 로그
         if (!global.__authBypassWarned) {
           console.warn("[WARN] Auth bypass enabled (SKIP_AUTH=1) — dev only");
           global.__authBypassWarned = true;
@@ -51,7 +48,7 @@ async function authMw(req, res, next) {
       return next();
     }
 
-    // ✅ 실제 인증 미들웨어 동적 로딩
+    // 실제 인증 미들웨어 동적 로딩
     if (!_authFn) {
       const mod = await import("../../../auth/middleware/auth.middleware.js");
       const base = mod.authenticateAccessToken || mod.auth || mod.default;
@@ -65,11 +62,8 @@ async function authMw(req, res, next) {
 
     return _authFn(req, res, (err) => {
       if (err) return next(err);
-
-      // auth.middleware.js 가 req.payload만 채우는 구조라면 user로 매핑
       if (!req.user && req.payload) {
         const p = req.payload;
-        // payload 구조에 맞게 매핑 (예: { id, isCompleted, nickname } 등)
         req.user = (p?.user || p) ?? null;
         if (!req.user?.id) {
           const e = new Error("UNAUTHORIZED");
@@ -85,18 +79,20 @@ async function authMw(req, res, next) {
 }
 
 /* ──────────────────────────────────────────────────────────────
-   목록 조회  GET /api/events/events
+   목록 조회  GET /api/events
    ────────────────────────────────────────────────────────────── */
-r.get("/events", async (req, res, next) => {
+r.get("/", async (req, res, next) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 목록 조회'
     #swagger.description = '한 페이지에 6개씩 반환합니다.'
     #swagger.parameters['page'] = {
-      in: 'query',
-      required: false,
-      schema: { type: 'integer', default: 1 },
+      in: 'query', required: false, schema: { type: 'integer', default: 1 },
       description: '페이지 번호(기본 1)'
+    }
+    #swagger.parameters['size'] = {
+      in: 'query', required: false, schema: { type: 'integer', default: 6 },
+      description: '페이지 크기(기본 6)'
     }
     #swagger.responses[200] = {
       description: '목록/페이지네이션 응답',
@@ -131,16 +127,16 @@ r.get("/events", async (req, res, next) => {
   */
   try {
     const data = await list(req.query);
-    return res.success(data, 200);
+    return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
   }
 });
 
 /* ──────────────────────────────────────────────────────────────
-   상세 조회  GET /api/events/events/:eventId
+   상세 조회  GET /api/events/:eventId
    ────────────────────────────────────────────────────────────── */
-r.get("/events/:eventId", async (req, res, next) => {
+r.get("/:eventId", async (req, res, next) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 상세 조회'
@@ -189,16 +185,16 @@ r.get("/events/:eventId", async (req, res, next) => {
   */
   try {
     const data = await detail(Number(req.params.eventId));
-    return res.success(data, 200);
+    return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
   }
 });
 
 /* ──────────────────────────────────────────────────────────────
-   수정  PATCH /api/events/events/:eventId  (인증 필요)
+   수정  PATCH /api/events/:eventId  (인증 필요)
    ────────────────────────────────────────────────────────────── */
-r.patch("/events/:eventId", authMw, async (req, res, next) => {
+r.patch("/:eventId", authMw, async (req, res, next) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 수정'
@@ -234,16 +230,16 @@ r.patch("/events/:eventId", authMw, async (req, res, next) => {
   */
   try {
     const data = await edit(Number(req.params.eventId), req.body, req.user);
-    return res.success(data, 200);
+    return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
   }
 });
 
 /* ──────────────────────────────────────────────────────────────
-   취소/삭제  DELETE /api/events/events/:eventId  (인증 필요)
+   취소/삭제  DELETE /api/events/:eventId  (인증 필요)
    ────────────────────────────────────────────────────────────── */
-r.delete("/events/:eventId", authMw, async (req, res, next) => {
+r.delete("/:eventId", authMw, async (req, res, next) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '밥약 이벤트 취소(삭제)'
@@ -257,7 +253,7 @@ r.delete("/events/:eventId", authMw, async (req, res, next) => {
   */
   try {
     const data = await cancel(Number(req.params.eventId), req.user);
-    return res.success(data, 200);
+    return res.success ? res.success(data, 200) : res.status(200).json(data);
   } catch (e) {
     next(e);
   }
