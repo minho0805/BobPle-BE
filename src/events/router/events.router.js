@@ -93,7 +93,7 @@ r.get("/", async (req, res, next) => {
   }
 });
 
-r.get("/:eventId", parseEventId, async (req, res, next) => {
+r.put("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   try {
     const data = await detail(req.eventId);
     return res.success ? res.success(data, 200) : res.status(200).json(data);
@@ -102,7 +102,7 @@ r.get("/:eventId", parseEventId, async (req, res, next) => {
   }
 });
 
-r.put("/:eventId", authMw, parseEventId, async (req, res, next) => {
+r.put("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   try {
     const data = await edit(req.eventId, req.body, req.user);
     return res.success ? res.success(data, 200) : res.status(200).json(data);
@@ -111,7 +111,7 @@ r.put("/:eventId", authMw, parseEventId, async (req, res, next) => {
   }
 });
 
-r.delete("/:eventId", authMw, parseEventId, async (req, res, next) => {
+r.delete("/:eventId(\\d+)", authMw, parseEventId, async (req, res, next) => {
   try {
     const data = await cancel(req.eventId, req.user);
     return res.success ? res.success(data, 200) : res.status(200).json(data);
