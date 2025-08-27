@@ -21,18 +21,26 @@ export function findMany(skip = 0, take = 6) {
     skip: _skip,
     take: _take,
     orderBy: { createdAt: "desc" },
-    // ⚠️ 아래 릴레이션명은 schema.prisma와 동일해야 함
-    include: {
-      users: { select: { id: true, nickname: true } }, // 작성자(creator) 관계명이 users 라면 OK
-      restaurants: true, // 식당 관계명이 restaurants 라면 OK
-      eventApplications: true, // 참가신청들
+    select: {
+      id: true,
+      title: true,
+      content: true,
+      restaurantId: true,
+      startAt: true,
+      endAt: true,
+      createdAt: true,
+      users: { select: { id: true, nickname: true } }, // 관계명 확인
+      restaurants: { select: { id: true, name: true } }, // 관계명 확인
+      _count: { select: { eventApplications: true } }, // ⚡ 가볍게 카운트만
     },
   });
 }
 
-/** 전체 개수 */
-export function countAll() {
-  return prisma.events.count();
+/** 전체 개수 (findMany와 where 조건 일치시켜야 함) */
+export function countAll(/* filters */) {
+  return prisma.events.count({
+    // where: { ...filters }  // findMany와 동일 조건
+  });
 }
 
 /** 상세 + 참가자 포함 */
@@ -48,14 +56,14 @@ export function findByIdWithParticipants(eventId) {
     where: { id },
     include: {
       // 작성자
-      users: { select: { id: true, nickname: true } }, // ← schema가 user(단수)면 여기를 user로 교체
+      users: { select: { id: true, nickname: true } }, // 관계명이 user면 user로
       // 식당
-      restaurants: true, // ← schema가 restaurant(단수)면 restaurant로 교체
+      restaurants: true, // 관계명이 restaurant면 restaurant로
       // 참가 신청 + 신청자
       eventApplications: {
         orderBy: { createdAt: "asc" },
         include: {
-          users: { select: { id: true, nickname: true } }, // ← schema가 user(단수)면 user로 교체
+          users: { select: { id: true, nickname: true } }, // 관계명이 user면 user로
         },
       },
     },
@@ -70,10 +78,7 @@ export function updateById(eventId, data) {
     e.status = 400;
     throw e;
   }
-  return prisma.events.update({
-    where: { id },
-    data,
-  });
+  return prisma.events.update({ where: { id }, data });
 }
 
 /** 삭제 */
@@ -84,7 +89,5 @@ export function deleteById(eventId) {
     e.status = 400;
     throw e;
   }
-  return prisma.events.delete({
-    where: { id },
-  });
+  return prisma.events.delete({ where: { id } });
 }
