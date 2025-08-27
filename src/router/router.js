@@ -9,9 +9,12 @@ import notificationsRouter from "../notifications/router/notifications.router.js
 
 const router = express.Router({ mergeParams: true });
 
+// 부팅 시 라우트 마운트 확인 로그 (배포 로그 확인용)
+console.log("[BOOT] mounting /api/events");
+
 router.use("/api/auth", authRouter);
 router.use("/api/chats", chatsRouter);
-router.use("/api/events", eventsRouter);
+router.use("/api/events", eventsRouter); // ✅ 여기서만 마운트
 router.use("/api/restaurants", restaurantsRouter);
 router.use("/api/reviews", reviewsRouter);
 router.use("/api/users", usersRouter);

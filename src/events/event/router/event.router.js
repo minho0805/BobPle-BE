@@ -1,17 +1,17 @@
 // src/events/event/router/event.router.js
+
 // ⚠️ 이 파일은 실제 라우터가 아님. 상위 라우터만 re-export 합니다.
 // 실제 라우터는 src/events/router/events.router.js 입니다.
-
-import { Router } from "express";
 export { default } from "../../router/events.router.js";
 
 /* ─────────────────────────────────────────────────────────────
- * 문서 전용 더미 라우트 (swagger-autogen 스캔용)
+ * swagger-autogen 스캔용 더미 라우트
  * - 런타임에 app.use로 마운트되지 않음(실행 영향 없음)
- * - swagger.js는 index.js만 스캔하지만, import chain을 따라
- *   이 파일도 읽히므로 여기의 주석을 문서에 반영할 수 있음
+ * - index.js → router.js → events.router.js 경로로 실제 라우팅은 처리됩니다.
+ * - 여기의 주석만 문서화에 활용됩니다.
  * ──────────────────────────────────────────────────────────── */
 
+import { Router } from "express";
 const __doc = Router();
 
 /* 목록: GET /api/events */
@@ -59,7 +59,7 @@ __doc.get("/api/events/:eventId", (_req, _res) => {
   */
 });
 
-/* 생성: POST /api/events  (현재 BE가 /api/events/creation 사용 중이면 이 주석대로 바꾸길 권장) */
+/* 생성: POST /api/events (BE가 /api/events/creation 사용 중이면 거기에 맞춰 문서만 수정하세요) */
 __doc.post("/api/events", (_req, _res) => {
   /*
     #swagger.tags = ['Events']
@@ -84,22 +84,31 @@ __doc.get("/api/events/:eventId/application/", (_req, _res) => {
   */
 });
 
-/* 필요 시: 수정/취소도 명시 (PUT/DELETE) */
+/* 수정/취소 */
 __doc.put("/api/events/:eventId", (_req, _res) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '이벤트 수정'
     #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer', example: 21 } }
-    #swagger.requestBody = { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/EventEditDto" } } } }
+    #swagger.requestBody = {
+      required: true,
+      content: { "application/json": { schema: { $ref: "#/components/schemas/EventEditDto" } } }
+    }
     #swagger.responses[200] = { description: '수정됨' }
+    #swagger.responses[400] = { description: 'validation error' }
+    #swagger.responses[401] = { description: 'unauthorized' }
+    #swagger.responses[404] = { description: 'not found' }
   */
 });
+
 __doc.delete("/api/events/:eventId", (_req, _res) => {
   /*
     #swagger.tags = ['Events']
     #swagger.summary = '이벤트 취소'
     #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer', example: 21 } }
     #swagger.responses[200] = { description: '취소됨' }
+    #swagger.responses[401] = { description: 'unauthorized' }
+    #swagger.responses[404] = { description: 'not found' }
   */
 });
 
