@@ -15,3 +15,8 @@ setupCommonError(app);
 app.listen(port, () => {
   console.log(`서버 열림 - 포트 : ${port}`);
 });
+
+app.use((req, res, next) => {
+  console.log("[REQ]", req.method, req.originalUrl);
+  next();
+});
