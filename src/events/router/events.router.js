@@ -1,6 +1,11 @@
 // src/events/router/events.router.js
 import { Router } from "express";
-import { list, detail, edit, cancel } from "../event/service/event.service.js";
+
+// 하위 라우터들
+import eventRouter from "../event/router/event.router.js"; // GET /, GET/PUT/DELETE /:eventId
+import creationRouter from "../creation/router/creation.router.js"; // POST /
+import applicationRouter from "../application/router/application.router.js"; // (있다면) 신청 관련
+import restaurantsRouter from "../../restaurants/router/restaurants.router.js"; // (있다면) 식당 관련
 
 const r = Router();
 
@@ -13,99 +18,13 @@ r.use((req, _res, next) => {
   next();
 });
 
-/* ────────────── 유틸 ────────────── */
-const toPosInt = (v, def) => {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : def;
-};
+/* 하위 라우터 마운트 (여기서는 절대경로 쓰지 않음) */
+r.use("/", eventRouter); // 리스트/상세/수정/취소 → '/', '/:eventId'
+r.use("/", creationRouter); // 생성 → 'POST /'  == POST /api/events
+r.use("/", applicationRouter); // 신청 관련 경로들(있다면)
+r.use("/restaurants", restaurantsRouter); // 필요 시
 
-function onlyDigits404(req, res, next) {
-  const { eventId } = req.params;
-  if (!/^\d+$/.test(eventId)) {
-    return res.status(404).json({ ok: false, error: "NOT_FOUND" });
-  }
-  next();
-}
-
-function parseEventId(req, _res, next) {
-  const id = Number(req.params.eventId);
-  if (!Number.isInteger(id) || id <= 0) {
-    const e = new Error("Invalid eventId");
-    e.status = 404;
-    return next(e);
-  }
-  req.eventId = id;
-  next();
-}
-
-/* ────────────── 라우트 ────────────── */
-/** GET /api/events */
-r.get("/", async (req, res, next) => {
-  try {
-    const page = toPosInt(req.query.page, 1);
-    const size = Math.min(50, toPosInt(req.query.size ?? req.query.limit, 12));
-    const search = (req.query.search ?? "").trim();
-
-    console.log("[HIT] GET /api/events", { page, size, search });
-
-    const result = await list({ ...req.query, page, size, search });
-
-    return res.status(200).json({
-      ok: true,
-      data: {
-        items: result.items ?? [],
-        pagination: {
-          page: result.page ?? page,
-          size: result.size ?? size,
-          total: result.total ?? 0,
-          totalPages: Math.max(
-            1,
-            Math.ceil((result.total ?? 0) / (result.size ?? size)),
-          ),
-          hasNext:
-            (result.page ?? page) * (result.size ?? size) < (result.total ?? 0),
-          hasPrev: (result.page ?? page) > 1,
-        },
-      },
-    });
-  } catch (e) {
-    next(e);
-  }
-});
-
-/** GET /api/events/:eventId */
-r.get("/:eventId", onlyDigits404, parseEventId, async (req, res, next) => {
-  try {
-    const data = await detail(req.eventId);
-    return res.status(200).json({ ok: true, data });
-  } catch (e) {
-    if (e.status === 404)
-      return res.status(404).json({ ok: false, error: "NOT_FOUND" });
-    next(e);
-  }
-});
-
-/** PUT /api/events/:eventId */
-r.put("/:eventId", onlyDigits404, parseEventId, async (req, res, next) => {
-  try {
-    const data = await edit(req.eventId, req.body, req.user);
-    return res.status(200).json({ ok: true, data });
-  } catch (e) {
-    next(e);
-  }
-});
-
-/** DELETE /api/events/:eventId */
-r.delete("/:eventId", onlyDigits404, parseEventId, async (req, res, next) => {
-  try {
-    const data = await cancel(req.eventId, req.user);
-    return res.status(200).json({ ok: true, data });
-  } catch (e) {
-    next(e);
-  }
-});
-
-/* 이 라우터 하위에서만 404 */
+/* 이 블록 하위에서만 404 */
 r.use((_req, res) => res.status(404).json({ ok: false, error: "NOT_FOUND" }));
 
 export default r;
