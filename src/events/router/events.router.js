@@ -3,6 +3,8 @@ import { list, detail, edit, cancel } from "../event/service/event.service.js";
 
 const r = Router();
 
+r.get("/_ping", (_req, res) => res.json({ ok: true, where: "events-router" }));
+
 // 개발/배포 공통: 실제 요청 도달 확인용 로그
 r.use((req, _res, next) => {
   console.log("[EVENTS] hit", req.method, req.originalUrl);
@@ -24,6 +26,7 @@ function onlyDigits404(req, res, next) {
 function parseEventId(req, _res, next) {
   const id = Number(req.params.eventId);
   if (!Number.isInteger(id) || id <= 0) {
+    ß;
     const e = new Error("Invalid eventId");
     e.status = 404;
     throw e;
