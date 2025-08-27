@@ -24,3 +24,6 @@ setupCommonError(app);
 app.listen(port, () => {
   console.log(`서버 열림 - 포트 : ${port}`);
 });
+//개발용
+console.log("[BOOT] mounting /api/events");
+router.use("/api/events", eventsRouter);

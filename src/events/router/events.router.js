@@ -3,6 +3,11 @@ import { Router } from "express";
 import { list, detail, edit, cancel } from "../event/service/event.service.js";
 
 const r = Router();
+//개발용
+r.use((req, _res, next) => {
+  console.log("[EVENTS] hit", req.method, req.originalUrl);
+  next();
+});
 
 /* ───────────────── 유틸 ───────────────── */
 const toPosInt = (v, def) => {
