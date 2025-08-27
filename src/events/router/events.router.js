@@ -3,6 +3,15 @@ import { list, detail, edit, cancel } from "../event/service/event.service.js";
 
 const r = Router();
 
+router.get("/api/events", (req, res) => {
+  res.status(200).json({
+    ok: true,
+    via: "top-level router",
+    got: "GET /api/events",
+    query: req.query,
+  });
+});
+
 r.get("/_ping", (_req, res) => res.json({ ok: true, where: "events-router" }));
 
 // 개발/배포 공통: 실제 요청 도달 확인용 로그
