@@ -22,4 +22,12 @@ router.use("/api/notifications", notificationsRouter);
 
 console.log("[BOOT] mounting /api/events");
 
+router.get("/api/events", (req, res) => {
+  res.status(200).json({
+    ok: true,
+    via: "top-level router",
+    query: req.query,
+  });
+});
+
 export default router;
