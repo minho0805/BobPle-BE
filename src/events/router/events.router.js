@@ -1,11 +1,11 @@
 // src/events/router/events.router.js
 import { Router } from "express";
 
-// 하위 라우터들
+// 하위 라우터 (절대경로 금지: 내부에서 '/' 기준으로만 정의)
 import eventRouter from "../event/router/event.router.js"; // GET /, GET/PUT/DELETE /:eventId
 import creationRouter from "../creation/router/creation.router.js"; // POST /
-import applicationRouter from "../application/router/application.router.js"; // (있다면) 신청 관련
-import restaurantsRouter from "../../restaurants/router/restaurants.router.js"; // (있다면) 식당 관련
+import applicationRouter from "../application/router/application.router.js"; // /:eventId/applications 등
+import restaurantsRouter from "../../restaurants/router/restaurants.router.js"; // /restaurants/*
 
 const r = Router();
 
@@ -18,13 +18,21 @@ r.use((req, _res, next) => {
   next();
 });
 
-/* 하위 라우터 마운트 (여기서는 절대경로 쓰지 않음) */
-r.use("/", eventRouter); // 리스트/상세/수정/취소 → '/', '/:eventId'
-r.use("/", creationRouter); // 생성 → 'POST /'  == POST /api/events
-r.use("/", applicationRouter); // 신청 관련 경로들(있다면)
-r.use("/restaurants", restaurantsRouter); // 필요 시
+/* 프리플라이트(CORS) & HEAD 허용 — (전역 CORS 미들웨어가 있다면 생략 가능) */
+r.options("/*", (_req, res) => res.sendStatus(204));
+r.head("/*", (_req, res) => res.sendStatus(200));
 
-/* 이 블록 하위에서만 404 */
-r.use((_req, res) => res.status(404).json({ ok: false, error: "NOT_FOUND" }));
+/* 하위 라우터 마운트 (상대 경로만) */
+r.use("/", eventRouter); // '/', '/:eventId'
+r.use("/", creationRouter); // 'POST /'
+r.use("/", applicationRouter); // 신청 관련 경로들
+r.use("/restaurants", restaurantsRouter);
+
+/* 서브 라우터 404 (여기 블록 내에서만) */
+r.use((req, res) => {
+  res
+    .status(404)
+    .json({ ok: false, error: "NOT_FOUND", path: req.originalUrl });
+});
 
 export default r;
