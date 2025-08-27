@@ -29,36 +29,31 @@ function parseEventId(req, _res, next) {
 
 /* ───────────────── 라우터 ───────────────── */
 
-/*
-  #swagger.tags = ['Events']
-  #swagger.summary = '이벤트 목록'
-  #swagger.description = '페이지네이션 목록을 반환합니다.'
-  #swagger.parameters['page']  = { in: 'query', schema: { type: 'integer', example: 1, minimum: 1 }, required: false }
-  #swagger.parameters['size']  = { in: 'query', schema: { type: 'integer', example: 12, minimum: 1, maximum: 50 }, required: false }
-  #swagger.parameters['limit'] = { in: 'query', schema: { type: 'integer', example: 12, minimum: 1, maximum: 50 }, required: false, description: 'size와 동일(호환용)' }
-  #swagger.parameters['search']= { in: 'query', schema: { type: 'string', example: '강남' }, required: false }
-  #swagger.responses[200] = {
-    description: '목록',
-    schema: {
-      type: 'object',
-      properties: {
-        ok: { type: 'boolean', example: true },
-        events: { type: 'array', items: { $ref: '#/components/schemas/Event' } },
-        pagination: {
-          type: 'object',
-          properties: {
-            page: { type: 'integer', example: 1 },
-            limit: { type: 'integer', example: 12 },
-            total: { type: 'integer', example: 128 },
-            totalPages: { type: 'integer', example: 11 },
-            hasNext: { type: 'boolean', example: true },
-            hasPrev: { type: 'boolean', example: false }
-          }
-        }
-      }
-    }
-  }
-*/
+/**
+ * @swagger
+ * /api/events:
+ *   get:
+ *     summary: 이벤트 목록
+ *     tags: [Events]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *           default: 6
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: OK
+ */
 r.get("/", async (req, res, next) => {
   try {
     const page = toPosInt(req.query.page, 1);

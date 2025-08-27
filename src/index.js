@@ -7,16 +7,20 @@ import router from "./router/router.js";
 dotenv.config();
 
 const app = setupExpress();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
+
 setupFirebase();
 setupSwagger(app);
-app.use(router); // 라우터 설정
-setupCommonError(app);
-app.listen(port, () => {
-  console.log(`서버 열림 - 포트 : ${port}`);
-});
 
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log("[REQ]", req.method, req.originalUrl);
   next();
+});
+
+app.use(router);
+
+setupCommonError(app);
+
+app.listen(port, () => {
+  console.log(`서버 열림 - 포트 : ${port}`);
 });
