@@ -20,4 +20,6 @@ router.use("/api/reviews", reviewsRouter);
 router.use("/api/users", usersRouter);
 router.use("/api/notifications", notificationsRouter);
 
+console.log("[BOOT] mounting /api/events");
+
 export default router;
