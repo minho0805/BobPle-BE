@@ -12,14 +12,17 @@ const port = process.env.PORT || 3000;
 setupFirebase();
 setupSwagger(app);
 
+// 요청 로깅 (개발용)
 app.use((req, _res, next) => {
   console.log("[REQ]", req.method, req.originalUrl);
   next();
 });
 
-app.use(router); // ✅ 라우터 한 번만 마운트
+// ✅ 모든 라우터를 한 번에 마운트
+app.use(router);
 
-setupCommonError(app); // ✅ 항상 마지막
+// ✅ 에러 핸들러는 항상 마지막
+setupCommonError(app);
 
 app.listen(port, () => {
   console.log(`서버 열림 - 포트 : ${port}`);
