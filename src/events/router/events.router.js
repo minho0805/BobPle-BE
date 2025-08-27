@@ -1,20 +1,13 @@
+// src/events/router/events.router.js
 import { Router } from "express";
 import { list, detail, edit, cancel } from "../event/service/event.service.js";
 
 const r = Router();
 
-router.get("/api/events", (req, res) => {
-  res.status(200).json({
-    ok: true,
-    via: "top-level router",
-    got: "GET /api/events",
-    query: req.query,
-  });
-});
+/* 헬스체크 */
+r.get("/_ping", (_req, res) => res.json({ ok: true, where: "/api/events" }));
 
-r.get("/_ping", (_req, res) => res.json({ ok: true, where: "events-router" }));
-
-// 개발/배포 공통: 실제 요청 도달 확인용 로그
+/* 공통 로그 */
 r.use((req, _res, next) => {
   console.log("[EVENTS] hit", req.method, req.originalUrl);
   next();
@@ -25,6 +18,7 @@ const toPosInt = (v, def) => {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : def;
 };
+
 function onlyDigits404(req, res, next) {
   const { eventId } = req.params;
   if (!/^\d+$/.test(eventId)) {
@@ -32,129 +26,86 @@ function onlyDigits404(req, res, next) {
   }
   next();
 }
+
 function parseEventId(req, _res, next) {
   const id = Number(req.params.eventId);
   if (!Number.isInteger(id) || id <= 0) {
-    ß;
     const e = new Error("Invalid eventId");
     e.status = 404;
-    throw e;
+    return next(e);
   }
   req.eventId = id;
   next();
 }
 
 /* ────────────── 라우트 ────────────── */
-/**
- * @swagger
- * /api/events:
- *   get:
- *     summary: 이벤트 목록
- *     tags: [Events]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema: { type: integer, default: 1 }
- *       - in: query
- *         name: size
- *         schema: { type: integer, default: 6, maximum: 50 }
- *       - in: query
- *         name: search
- *         schema: { type: string }
- *     responses:
- *       200: { description: OK }
- */
+/** GET /api/events */
 r.get("/", async (req, res, next) => {
   try {
     const page = toPosInt(req.query.page, 1);
     const size = Math.min(50, toPosInt(req.query.size ?? req.query.limit, 12));
+    const search = (req.query.search ?? "").trim();
 
-    console.log("[HIT] GET /api/events", {
-      page,
-      size,
-      search: req.query.search ?? "",
-    });
+    console.log("[HIT] GET /api/events", { page, size, search });
 
-    const data = await list({ ...req.query, page, size });
+    const result = await list({ ...req.query, page, size, search });
 
-    if (typeof res.success === "function") return res.success(data, 200);
-    return res.status(200).json(
-      data ?? {
-        ok: true,
-        events: [],
+    return res.status(200).json({
+      ok: true,
+      data: {
+        items: result.items ?? [],
         pagination: {
-          page,
-          size,
-          total: 0,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false,
+          page: result.page ?? page,
+          size: result.size ?? size,
+          total: result.total ?? 0,
+          totalPages: Math.max(
+            1,
+            Math.ceil((result.total ?? 0) / (result.size ?? size)),
+          ),
+          hasNext:
+            (result.page ?? page) * (result.size ?? size) < (result.total ?? 0),
+          hasPrev: (result.page ?? page) > 1,
         },
       },
-    );
+    });
   } catch (e) {
     next(e);
   }
 });
 
-/*
-  #swagger.tags = ['Events']
-  #swagger.summary = '이벤트 상세'
-  #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer', example: 21 } }
-  #swagger.responses[200] = { description: '상세' }
-  #swagger.responses[404] = { description: 'not found' }
-*/
+/** GET /api/events/:eventId */
 r.get("/:eventId", onlyDigits404, parseEventId, async (req, res, next) => {
   try {
     const data = await detail(req.eventId);
-    if (typeof res.success === "function") return res.success(data, 200);
-    return res.status(200).json(data);
+    return res.status(200).json({ ok: true, data });
   } catch (e) {
+    if (e.status === 404)
+      return res.status(404).json({ ok: false, error: "NOT_FOUND" });
     next(e);
   }
 });
 
-/*
-  #swagger.tags = ['Events']
-  #swagger.summary = '이벤트 수정'
-  #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer', example: 21 } }
-  #swagger.requestBody = {
-    required: true,
-    content: { "application/json": { schema: { $ref: "#/components/schemas/EventEditDto" } } }
-  }
-  #swagger.responses[200] = { description: '수정된 이벤트' }
-  #swagger.responses[401] = { description: 'unauthorized' }
-  #swagger.responses[404] = { description: 'not found' }
-*/
+/** PUT /api/events/:eventId */
 r.put("/:eventId", onlyDigits404, parseEventId, async (req, res, next) => {
   try {
     const data = await edit(req.eventId, req.body, req.user);
-    if (typeof res.success === "function") return res.success(data, 200);
-    return res.status(200).json(data);
+    return res.status(200).json({ ok: true, data });
   } catch (e) {
     next(e);
   }
 });
 
-/*
-  #swagger.tags = ['Events']
-  #swagger.summary = '이벤트 취소'
-  #swagger.parameters['eventId'] = { in: 'path', required: true, schema: { type: 'integer', example: 21 } }
-  #swagger.responses[200] = { description: '취소 결과' }
-  #swagger.responses[401] = { description: 'unauthorized' }
-  #swagger.responses[404] = { description: 'not found' }
-*/
+/** DELETE /api/events/:eventId */
 r.delete("/:eventId", onlyDigits404, parseEventId, async (req, res, next) => {
   try {
     const data = await cancel(req.eventId, req.user);
-    if (typeof res.success === "function") return res.success(data, 200);
-    return res.status(200).json(data);
+    return res.status(200).json({ ok: true, data });
   } catch (e) {
     next(e);
   }
 });
 
-// ✅ Express 5: catch-all JSON 404 (항상 마지막)
+/* 이 라우터 하위에서만 404 */
 r.use((_req, res) => res.status(404).json({ ok: false, error: "NOT_FOUND" }));
 
 export default r;
