@@ -17,13 +17,10 @@ app.use((req, _res, next) => {
   next();
 });
 
-app.use(router);
+app.use(router); // ✅ 라우터 한 번만 마운트
 
-setupCommonError(app);
+setupCommonError(app); // ✅ 항상 마지막
 
 app.listen(port, () => {
   console.log(`서버 열림 - 포트 : ${port}`);
 });
-//개발용
-console.log("[BOOT] mounting /api/events");
-router.use("/api/events", eventsRouter);
