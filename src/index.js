@@ -18,6 +18,8 @@ app.use((req, _res, next) => {
   next();
 });
 
+app.get("/_ping", (_req, res) => res.json({ ok: true, where: "root" }));
+
 // ✅ 모든 라우터를 한 번에 마운트
 app.use(router);
 
