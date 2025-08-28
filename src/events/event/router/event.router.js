@@ -1,4 +1,4 @@
-// 실제로 app.use로 마운트되는 라우터 파일 (예: src/events/router/event.router.js)
+// src/events/router/event.router.js
 import { Router } from "express";
 import * as svc from "../service/event.service.js";
 
@@ -11,12 +11,13 @@ r.get("/", async (req, res, next) => {
     const page = Math.max(1, parseInt(req.query.page ?? "1", 10) || 1);
     const sizeOrLimit = req.query.size ?? req.query.limit ?? "12";
     const size = Math.max(1, Math.min(50, parseInt(sizeOrLimit, 10) || 12));
+
+    // 검색어/정렬 기본값
     const search = (req.query.search ?? "").trim();
     const sort = (req.query.sort ?? "latest").trim();
 
     const result = await svc.list({ page, size, search, sort });
 
-    // ✅ FE가 쓰기 편한 통일 스키마
     return res.status(200).json({
       ok: true,
       data: {
@@ -43,9 +44,17 @@ r.get("/:eventId", async (req, res, next) => {
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(404).json({ ok: false, error: "NOT_FOUND" });
     }
-    const data = await svc.detail(id);
-    if (!data) return res.status(404).json({ ok: false, error: "NOT_FOUND" });
-    return res.status(200).json({ ok: true, data });
+
+    const item = await svc.detail(id);
+    if (!item) {
+      return res.status(404).json({ ok: false, error: "NOT_FOUND" });
+    }
+
+    // ✅ 통일된 응답 구조: list처럼 data 안에 item으로 반환
+    return res.status(200).json({
+      ok: true,
+      data: { item },
+    });
   } catch (e) {
     next(e);
   }
