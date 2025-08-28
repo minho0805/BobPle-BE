@@ -129,10 +129,8 @@ export async function detail(eventId) {
   };
 }
 
-/**
- * 수정
- * - 허용 필드만 반영
- * - ISO 문자열/숫자 변환 유의
+/*
+ * 밥약 수정
  */
 export async function edit(eventId, patch, me) {
   const ev = await findByIdWithParticipants(eventId);
@@ -176,8 +174,8 @@ export async function edit(eventId, patch, me) {
   };
 }
 
-/**
- * 취소(삭제)
+/*
+ * 밥약 취소 (삭제)
  */
 export async function cancel(eventId, me) {
   const ev = await findByIdWithParticipants(eventId);

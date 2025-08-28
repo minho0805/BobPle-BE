@@ -1,4 +1,4 @@
-// src/events/event/dto/request/event.request.dto.js
+// 위치 : src/events/event/dto/request/event.request.dto.js
 const toPosInt = (v, def = 0) => {
   const n = Number(v);
   return Number.isInteger(n) && n > 0 ? n : def;
@@ -13,7 +13,7 @@ export function parseListQuery(query) {
 export function parseEventIdParam(params) {
   const eventId = toPosInt(params.eventId, NaN);
   if (!Number.isFinite(eventId)) {
-    const err = new Error('Invalid eventId');
+    const err = new Error("Invalid eventId");
     err.status = 400;
     throw err;
   }
@@ -29,8 +29,9 @@ export function parseEditBody(body) {
   if (body.restaurantId !== undefined) {
     const n = toPosInt(body.restaurantId, NaN);
     if (!Number.isFinite(n)) {
-      const err = new Error('Invalid restaurantId');
-      err.status = 400; throw err;
+      const err = new Error("Invalid restaurantId");
+      err.status = 400;
+      throw err;
     }
     out.restaurantId = n;
   }
@@ -40,8 +41,9 @@ export function parseEditBody(body) {
   if (body.startAt !== undefined) {
     startAtDate = new Date(body.startAt);
     if (Number.isNaN(startAtDate.getTime())) {
-      const err = new Error('Invalid startAt');
-      err.status = 400; throw err;
+      const err = new Error("Invalid startAt");
+      err.status = 400;
+      throw err;
     }
     out.startAt = startAtDate;
   }
@@ -49,23 +51,26 @@ export function parseEditBody(body) {
   if (body.endAt !== undefined) {
     endAtDate = new Date(body.endAt);
     if (Number.isNaN(endAtDate.getTime())) {
-      const err = new Error('Invalid endAt');
-      err.status = 400; throw err;
+      const err = new Error("Invalid endAt");
+      err.status = 400;
+      throw err;
     }
     out.endAt = endAtDate;
   }
 
   // ✅ 서로 관계 검증 (둘 다 있을 때만)
   if (startAtDate && endAtDate && endAtDate <= startAtDate) {
-    const err = new Error('endAt must be after startAt');
-    err.status = 400; throw err;
+    const err = new Error("endAt must be after startAt");
+    err.status = 400;
+    throw err;
   }
 
   if (body.maxParticipants !== undefined) {
     const n = toPosInt(body.maxParticipants, NaN);
     if (!Number.isFinite(n)) {
-      const err = new Error('Invalid maxParticipants');
-      err.status = 400; throw err;
+      const err = new Error("Invalid maxParticipants");
+      err.status = 400;
+      throw err;
     }
     out.maxParticipants = n; // 응답용
   }
