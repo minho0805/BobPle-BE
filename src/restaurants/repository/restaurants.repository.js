@@ -24,3 +24,19 @@ export const countRestaurants = async (options) => {
     where: options,
   });
 };
+export const findRestaurantById = async (data) => {
+  return await prisma.restaurants.findFirst({
+    select: {
+      name: true,
+      category: true,
+      address: true,
+      telephone: true,
+      mapx: true,
+      mapy: true,
+      isSponsored: true,
+    },
+    where: {
+      id: data.restaurantId,
+    },
+  });
+};

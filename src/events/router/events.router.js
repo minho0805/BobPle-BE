@@ -18,9 +18,9 @@ r.use((req, _res, next) => {
   next();
 });
 
-/* 프리플라이트(CORS) & HEAD 허용 — (전역 CORS 미들웨어가 있다면 생략 가능) */
-r.options("/*", (_req, res) => res.sendStatus(204));
-r.head("/*", (_req, res) => res.sendStatus(200));
+// /* 프리플라이트(CORS) & HEAD 허용 — (전역 CORS 미들웨어가 있다면 생략 가능) */
+// r.options("/*", (_req, res) => res.sendStatus(204));
+// r.head("/*", (_req, res) => res.sendStatus(200));
 
 /* 하위 라우터 마운트 (상대 경로만) */
 r.use("/", eventRouter); // '/', '/:eventId'

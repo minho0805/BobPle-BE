@@ -148,8 +148,8 @@ export class InvalidNumOfInputError extends Error {
   }
 }
 
-//찾을 수 없는 크루
-export class NotFoundCrewError extends Error {
+//찾을 수 없는 식당
+export class NotFoundRestaurantError extends Error {
   errorCode = "N001";
   statusCode = 404;
 
