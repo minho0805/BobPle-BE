@@ -5,3 +5,8 @@ export const fetchRestaurantsRequestDto = (query) => {
     take: parseInt(query.take) || 5,
   };
 };
+export const fetchRestaurantDetailRequestDto = (params) => {
+  return {
+    restaurantId: parseInt(params.restaurantId),
+  };
+};

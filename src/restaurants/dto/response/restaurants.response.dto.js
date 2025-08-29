@@ -4,3 +4,14 @@ export const fetchRestaurantsResponseDto = (data) => {
     counts: data.counts,
   };
 };
+export const fetchRestaurantDetailResponseDto = (data) => {
+  return {
+    name: data.name,
+    category: data.category,
+    address: data.address,
+    telephone: data.telephone,
+    mapx: data.mapx,
+    mapy: data.mapy,
+    isSponsored: data.isSponsored,
+  };
+};

@@ -1,5 +1,11 @@
-import { fetchRestaurantsRequestDto } from "../dto/request/restaurants.request.dto.js";
-import { fetchRestaurants } from "../service/restaurants.service.js";
+import {
+  fetchRestaurantDetailRequestDto,
+  fetchRestaurantsRequestDto,
+} from "../dto/request/restaurants.request.dto.js";
+import {
+  fetchRestaurantDetail,
+  fetchRestaurants,
+} from "../service/restaurants.service.js";
 import { StatusCodes } from "http-status-codes";
 
 export const handleFetchRestaurants = async (req, res, next) => {
@@ -29,4 +35,21 @@ export const handleFetchRestaurants = async (req, res, next) => {
     fetchRestaurantsRequestDto(req.query),
   );
   res.status(StatusCodes.OK).success(restaurants);
+};
+
+export const handlefetchRestautantDetails = async (req, res, next) => {
+  /*
+    #swagger.summary = "특정 식당 정보 가져오기"
+    #swagger.description = "지정한 식당의 세부정보를 가져옵니다."
+    #swagger.parameters["restaurantId"] = {
+      in:"path",
+      description: "식당 ID",
+      required: true,
+      example: 1
+    }
+  */
+  const restaurant = await fetchRestaurantDetail(
+    fetchRestaurantDetailRequestDto(req.params),
+  );
+  res.status(StatusCodes.OK).success(restaurant);
 };
