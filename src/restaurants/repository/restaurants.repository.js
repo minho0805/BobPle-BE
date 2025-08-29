@@ -2,7 +2,6 @@ import { prisma } from "../../db.config.js";
 export const findRestaurants = async (data) => {
   return await prisma.restaurants.findMany({
     select: {
-      id: true,
       name: true,
       category: true,
       address: true,
