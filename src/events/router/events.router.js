@@ -6,6 +6,7 @@ import eventRouter from "../event/router/event.router.js"; // GET /, GET/PUT/DEL
 import creationRouter from "../creation/router/creation.router.js"; // POST /
 import applicationRouter from "../application/router/application.router.js"; // /:eventId/applications 등
 import restaurantsRouter from "../../restaurants/router/restaurants.router.js"; // /restaurants/*
+import commentsRouter from "../comments/router/comments.router.js";
 
 const r = Router();
 
@@ -27,6 +28,7 @@ r.use("/", eventRouter); // '/', '/:eventId'
 r.use("/", creationRouter); // 'POST /'
 r.use("/", applicationRouter); // 신청 관련 경로들
 r.use("/restaurants", restaurantsRouter);
+r.use("/:eventId/comments", commentsRouter);
 
 /* 서브 라우터 404 (여기 블록 내에서만) */
 r.use((req, res) => {
