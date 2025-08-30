@@ -1,15 +1,25 @@
+// src/events/comments/router/comments.router.js
+
 import express from "express";
 import {
   createComment,
   listComments,
   deleteComment,
 } from "../controller/comments.controller.js";
+import {
+  authenticateAccessToken,
+  verifyUserIsActive,
+} from "../../../auth/middleware/auth.middleware.js";
 
 const router = express.Router({ mergeParams: true });
 
-// POST   /api/events/:eventId/comments
+/**
+ * POST /api/events/:eventId/comments
+ */
 router.post(
   "/",
+  authenticateAccessToken,
+  verifyUserIsActive,
   /*
     #swagger.tags = ['Comments']
     #swagger.summary = '댓글 작성'
@@ -26,9 +36,8 @@ router.post(
         "application/json": {
           schema: {
             type: 'object',
-            required: ['creatorId', 'content'],
+            required: ['content'],
             properties: {
-              creatorId: { type: 'integer', example: 2, description: '작성자(유저) ID' },
               content: { type: 'string', example: '저도 같이 가고 싶습니다!' }
             }
           }
@@ -39,11 +48,19 @@ router.post(
       description: '댓글 작성 성공',
       content: { "application/json": { } }
     }
+    #swagger.responses[401] = {
+      description: '인증 실패 (로그인 필요)'
+    }
+    #swagger.responses[400] = {
+      description: '잘못된 요청 값'
+    }
   */
   createComment
 );
 
-// GET    /api/events/:eventId/comments
+/**
+ * GET /api/events/:eventId/comments
+ */
 router.get(
   "/",
   /*
@@ -76,9 +93,13 @@ router.get(
   listComments
 );
 
-// DELETE /api/events/:eventId/comments/:commentId
+/**
+ * DELETE /api/events/:eventId/comments/:commentId
+ */
 router.delete(
   "/:commentId",
+  authenticateAccessToken,
+  verifyUserIsActive,
   /*
     #swagger.tags = ['Comments']
     #swagger.summary = '댓글 삭제'
@@ -99,6 +120,9 @@ router.delete(
     #swagger.responses[200] = {
       description: '댓글 삭제 성공',
       content: { "application/json": { } }
+    }
+    #swagger.responses[401] = {
+      description: '인증 실패 (로그인 필요)'
     }
     #swagger.responses[404] = {
       description: '해당 댓글을 찾을 수 없음'
