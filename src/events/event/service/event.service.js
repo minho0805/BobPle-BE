@@ -20,8 +20,7 @@ function clamp(n, min, max) {
 
 /**
  * 목록 조회
- * - creator/restaurant 객체를 유지해서 FE가 닉네임/장소명을 바로 쓸 수 있게 함
- * - 동시에 구버전 호환을 위해 상위 id 필드도 같이 내려줌
+ * - creator/restaurant 객체 유지 + 호환 평탄 필드 동시 제공
  */
 export async function list(q) {
   const pageRaw = q?.page ?? 1;
@@ -31,14 +30,11 @@ export async function list(q) {
   const size = clamp(toIntSafe(sizeRaw, 12), 1, 50);
 
   const [rows, total] = await Promise.all([
-    // ⚠️ findMany가 반드시 creator/restaurant를 include하도록 repository에서 보장해야 합니다.
-    //    (아래에 repo 체크리스트 첨부)
     findMany((page - 1) * size, size),
     countAll(),
   ]);
 
   const items = rows.map((ev) => {
-    // repo가 조인해준 객체 우선 사용 (백업으로 다양한 필드명 대응)
     const restaurantObj = ev.restaurant
       ? { id: ev.restaurant.id, name: ev.restaurant.name }
       : ev.restaurants
@@ -53,7 +49,6 @@ export async function list(q) {
           ? { id: ev.users.id, nickname: ev.users.nickname }
           : null;
 
-    // 호환용 상위 id (가능한 모든 후보에서 뽑아서 채움)
     const restaurantIdCompat =
       restaurantObj?.id ?? ev.restaurantId ?? ev.restaurant_id ?? null;
     const creatorIdCompat =
@@ -77,17 +72,14 @@ export async function list(q) {
       content: ev.content ?? null,
       chatUrl: buildChatUrl(ev),
 
-      // ✅ 객체 그대로 제공 (FE에서 e.creator?.nickname, e.restaurant?.name 사용 가능)
       creator: creatorObj,
       restaurant: restaurantObj,
 
-      // ✅ 호환용 평탄 필드(점진 마이그레이션)
       creatorId: creatorIdCompat,
       creator_id: creatorIdCompat,
       restaurantId: restaurantIdCompat,
       restaurant_id: restaurantIdCompat,
 
-      // 날짜/참가자 (snake + camel 동시 제공)
       start_at,
       end_at,
       startAt: start_at,
@@ -110,7 +102,6 @@ export async function list(q) {
 
 /**
  * 상세 조회
- * - 목록과 동일하게 creator/restaurant 객체 + 호환 필드 제공
  */
 export async function detail(eventId) {
   const ev = await findByIdWithParticipants(eventId);
@@ -128,7 +119,6 @@ export async function detail(eventId) {
     applicationId: a.id ?? null,
   }));
 
-  // creator/restaurant 객체 구성 (여러 필드명 대응)
   const creatorObj = ev.creator
     ? { id: ev.creator.id, nickname: ev.creator.nickname }
     : ev.user
@@ -153,11 +143,9 @@ export async function detail(eventId) {
     content: ev.content ?? null,
     chatUrl: buildChatUrl(ev),
 
-    // 객체
     creator: creatorObj,
     restaurant: restaurantObj,
 
-    // 호환 필드
     restaurant_id,
     restaurantId: restaurant_id,
     start_at,
@@ -165,13 +153,71 @@ export async function detail(eventId) {
     startAt: start_at,
     endAt: end_at,
 
-    // 참가자
     participants_count: participants.length,
     participants,
     participantsCount: participants.length,
   };
 }
 
-/*
- * 밥약 수정/취소는 기존 그대로 (필요한 경우만 평탄/객체 동시 유지)
- */
+/* ───────── 추가: 수정 ───────── */
+export async function edit(eventId, patch, me) {
+  const ev = await findByIdWithParticipants(eventId);
+  if (!ev) {
+    const err = new Error("not found");
+    err.status = 404;
+    throw err;
+  }
+
+  const creatorId = ev.creatorId ?? ev.userId ?? ev.users?.id ?? ev.user?.id;
+  if (!me || creatorId !== me.id) {
+    const err = new Error("FORBIDDEN");
+    err.status = 403;
+    throw err;
+  }
+
+  const allowed = {};
+  if (patch.title !== undefined) allowed.title = String(patch.title);
+  if (patch.content !== undefined) allowed.content = patch.content ?? null;
+  if (patch.restaurantId !== undefined)
+    allowed.restaurantId = Number(patch.restaurantId);
+  if (patch.startAt !== undefined) allowed.startAt = patch.startAt; // ISO 권장
+  if (patch.endAt !== undefined) allowed.endAt = patch.endAt;
+
+  const updated = await updateById(eventId, allowed);
+
+  const restaurant_id = updated.restaurantId ?? updated.restaurant_id ?? null;
+  const start_at = updated.startAt ?? updated.start_at ?? null;
+  const end_at = updated.endAt ?? updated.end_at ?? null;
+
+  return {
+    ...updated,
+    chatUrl: buildChatUrl(updated),
+    restaurant_id,
+    start_at,
+    end_at,
+    restaurantId: restaurant_id,
+    startAt: start_at,
+    endAt: end_at,
+  };
+}
+
+/* ───────── 추가: 취소(삭제) ───────── */
+export async function cancel(eventId, me) {
+  const ev = await findByIdWithParticipants(eventId);
+  if (!ev) {
+    const err = new Error("not found");
+    err.status = 404;
+    throw err;
+  }
+
+  const creatorId = ev.creatorId ?? ev.userId ?? ev.users?.id ?? ev.user?.id;
+  if (!me || creatorId !== me.id) {
+    const err = new Error("FORBIDDEN");
+    err.status = 403;
+    throw err;
+  }
+
+  const id = Number(eventId);
+  await deleteById(id);
+  return { id, canceled: true };
+}

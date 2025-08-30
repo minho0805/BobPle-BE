@@ -1,6 +1,11 @@
 // src/events/event/router/event.router.js
 import { Router } from "express";
-import { list, detail, edit, cancel } from "../service/event.service.js";
+import {
+  list,
+  detail,
+  edit,
+  cancel as cancelEvent,
+} from "../service/event.service.js";
 
 const r = Router();
 
@@ -17,7 +22,6 @@ function onlyDigits404(req, res, next) {
 let _authFn = null;
 async function authMw(req, res, next) {
   try {
-    // 프로덕션에서 우회 금지
     if (
       process.env.NODE_ENV === "production" &&
       process.env.SKIP_AUTH === "1"
@@ -47,7 +51,7 @@ async function authMw(req, res, next) {
       return next();
     }
 
-    // 실제 인증 미들웨어 동적 로딩
+    // 실제 인증 미들웨어 로드
     if (!_authFn) {
       const mod = await import("../../../auth/middleware/auth.middleware.js");
       _authFn = mod.authenticateAccessToken || mod.auth || mod.default;
@@ -61,8 +65,7 @@ async function authMw(req, res, next) {
     return _authFn(req, res, (err) => {
       if (err) return next(err);
       if (!req.user && req.payload) {
-        const p = req.payload;
-        req.user = (p?.user || p) ?? null;
+        req.user = (req.payload?.user || req.payload) ?? null;
       }
       next();
     });
@@ -72,7 +75,11 @@ async function authMw(req, res, next) {
 }
 
 /* ───────── 목록 ───────── */
-/** GET /api/events */
+/**
+ * #swagger.tags = ['Events']
+ * #swagger.summary = '밥약 목록 조회'
+ * #swagger.description = '페이징, 검색, 정렬 옵션으로 전체 이벤트 목록을 가져옵니다.'
+ */
 r.get("/", async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page ?? "1", 10) || 1);
@@ -103,7 +110,11 @@ r.get("/", async (req, res, next) => {
 });
 
 /* ───────── 상세 ───────── */
-/** GET /api/events/:eventId */
+/**
+ * #swagger.tags = ['Events']
+ * #swagger.summary = '밥약 상세 조회'
+ * #swagger.description = '이벤트 ID로 특정 밥약 상세 정보를 조회합니다.'
+ */
 r.get("/:eventId", onlyDigits404, async (req, res, next) => {
   try {
     const id = Number(req.params.eventId);
@@ -118,7 +129,11 @@ r.get("/:eventId", onlyDigits404, async (req, res, next) => {
 });
 
 /* ───────── 수정 ───────── */
-/** PUT /api/events/:eventId/edit */
+/**
+ * #swagger.tags = ['Events']
+ * #swagger.summary = '밥약 수정'
+ * #swagger.description = '작성자가 이벤트 정보를 수정합니다.'
+ */
 r.put("/:eventId/edit", onlyDigits404, authMw, async (req, res, next) => {
   try {
     const id = Number(req.params.eventId);
@@ -136,11 +151,15 @@ r.put("/:eventId/edit", onlyDigits404, authMw, async (req, res, next) => {
 });
 
 /* ───────── 삭제(취소) ───────── */
-/** DELETE /api/events/:eventId/cancel */
+/**
+ * #swagger.tags = ['Events']
+ * #swagger.summary = '밥약 취소/삭제'
+ * #swagger.description = '작성자가 이벤트를 취소(삭제)합니다.'
+ */
 r.delete("/:eventId/cancel", onlyDigits404, authMw, async (req, res, next) => {
   try {
     const id = Number(req.params.eventId);
-    const result = await cancel(id, req.user);
+    const result = await cancelEvent(id, req.user);
     return res.status(200).json({ ok: true, data: result });
   } catch (e) {
     if (e?.status === 403) {
@@ -153,9 +172,11 @@ r.delete("/:eventId/cancel", onlyDigits404, authMw, async (req, res, next) => {
   }
 });
 
-/* ───────── 호환 알리아스(선택) ─────────
-   - 일부 클라이언트가 PATCH /:id, DELETE /:id 로만 호출할 때 404 방지용
-*/
+/* ───────── 호환 알리아스 ───────── */
+/**
+ * #swagger.tags = ['Events']
+ * #swagger.summary = '밥약 수정 (PATCH 알리아스)'
+ */
 r.patch("/:eventId", onlyDigits404, authMw, async (req, res, next) => {
   try {
     const id = Number(req.params.eventId);
@@ -166,10 +187,14 @@ r.patch("/:eventId", onlyDigits404, authMw, async (req, res, next) => {
   }
 });
 
+/**
+ * #swagger.tags = ['Events']
+ * #swagger.summary = '밥약 취소/삭제 (DELETE 알리아스)'
+ */
 r.delete("/:eventId", onlyDigits404, authMw, async (req, res, next) => {
   try {
     const id = Number(req.params.eventId);
-    const result = await cancel(id, req.user);
+    const result = await cancelEvent(id, req.user);
     return res.status(200).json({ ok: true, data: result });
   } catch (e) {
     next(e);
