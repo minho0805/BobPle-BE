@@ -24,8 +24,9 @@ r.options("/*", (_req, res) => res.sendStatus(204));
 r.head("/*", (_req, res) => res.sendStatus(200));
 
 /* 하위 라우터 마운트 (상대 경로만) */
-r.use("/", applicationRouter); // 신청 관련 경로들
+
 r.use("/", eventRouter); // '/', '/:eventId'
+r.use("/", applicationRouter); // 신청 관련 경로들
 r.use("/", creationRouter); // 'POST /'
 r.use("/restaurants", restaurantsRouter);
 r.use("/:eventId/comments", commentsRouter);
