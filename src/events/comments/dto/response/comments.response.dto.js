@@ -5,7 +5,6 @@ export const mapComment = (c) => {
     id: c.id,
     eventId: c.eventId,
     creatorId: c.creatorId,
-    userId: c.users ? c.user.id : c.creatorId,
     content: c.content,
     createdAt: c.createdAt,
     // 확장: 작성자 표시가 필요하면 users select 추가 후 다음 키도 제공 가능
