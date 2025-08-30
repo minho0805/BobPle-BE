@@ -3,9 +3,10 @@ import { prisma } from "../../../db.config.js";
 /** 생성 */
 export const createCommentRepo = async ({ eventId, creatorId, content }) => {
   return await prisma.comments.create({
-    data: { eventId, creatorId, content },
-    include: {
-      users: { select: { id: true, nickname: true, profileImg: true } },
+    data: {
+      eventId,
+      creatorId,
+      content,
     },
   });
 };
