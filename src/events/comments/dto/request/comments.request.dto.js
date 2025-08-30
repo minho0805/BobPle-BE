@@ -1,49 +1,68 @@
-/** 공통 유틸 */
+// src/events/comments/dto/request/comments.request.dto.js
+
+import { InvalidInputValueError } from "../../../../error.js";
+
+/** 공통: 숫자 파싱 유틸 */
 const toInt = (v) => {
   const n = Number(v);
   return Number.isInteger(n) ? n : NaN;
 };
 
-/** POST 바디 → 서비스 입력
- *  인증을 사용하지 않으므로 body에서 creatorId, content를 받음
- *  params에서 eventId를 받음
- */
+/** POST /api/events/:eventId/comments  */
 export const bodyToCreateComment = (req) => {
   const eventId = toInt(req.params?.eventId);
-  const creatorId = toInt(req.body?.creatorId);
   const content = String(req.body?.content ?? "").trim();
 
-  if (!Number.isInteger(eventId) || eventId < 1)
-    throw new Error("invalid eventId");
-  if (!Number.isInteger(creatorId) || creatorId < 1)
-    throw new Error("invalid creatorId");
-  if (!content) throw new Error("content is required");
-  if (content.length > 1000) throw new Error("content must be <= 1000 chars");
+  // 로그인 미들웨어가 세팅한 payload 사용
+  const creatorId = req.payload?.id ?? req.payload?.userId ?? null;
+
+  if (!eventId || Number.isNaN(eventId)) {
+    throw new InvalidInputValueError("invalid eventId");
+  }
+  if (!creatorId) {
+    throw new InvalidInputValueError("invalid creatorId");
+  }
+  if (!content) {
+    throw new InvalidInputValueError("content is required");
+  }
 
   return { eventId, creatorId, content };
 };
 
-/** GET 쿼리 → 서비스 입력 (페이지네이션 기본값 page=1,size=10) */
+/** GET /api/events/:eventId/comments?page=&size=  */
 export const queryToListComments = (req) => {
   const eventId = toInt(req.params?.eventId);
-  if (!Number.isInteger(eventId) || eventId < 1)
-    throw new Error("invalid eventId");
+  if (!eventId || Number.isNaN(eventId)) {
+    throw new InvalidInputValueError("invalid eventId");
+  }
 
-  const page = Math.max(1, toInt(req.query?.page) || 1);
-  const size = Math.max(1, Math.min(50, toInt(req.query?.size) || 10));
+  // 기본값: page=1, size=10, size 상한 50
+  let page = toInt(req.query?.page ?? 1);
+  let size = toInt(req.query?.size ?? 10);
+
+  if (!page || page < 1) page = 1;
+  if (!size || size < 1) size = 10;
+  if (size > 50) size = 50;
 
   return { eventId, page, size };
 };
 
-/** DELETE 파라미터 → 서비스 입력 */
+/** DELETE /api/events/:eventId/comments/:commentId */
 export const paramsToDeleteComment = (req) => {
   const eventId = toInt(req.params?.eventId);
   const commentId = toInt(req.params?.commentId);
+  const requesterId = req.payload?.id ?? req.payload?.userId ?? null;
 
-  if (!Number.isInteger(eventId) || eventId < 1)
-    throw new Error("invalid eventId");
-  if (!Number.isInteger(commentId) || commentId < 1)
-    throw new Error("invalid commentId");
+  if (!eventId || Number.isNaN(eventId)) {
+    throw new InvalidInputValueError("invalid eventId");
+  }
+  if (!commentId || Number.isNaN(commentId)) {
+    throw new InvalidInputValueError("invalid commentId");
+  }
+  if (!requesterId) {
+    throw new InvalidInputValueError("invalid requester");
+  }
 
-  return { eventId, commentId };
+  // 서비스 레이어에서 본인 댓글/권한 체크에 활용
+  return { eventId, commentId, requesterId };
 };
